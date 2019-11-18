@@ -27,21 +27,21 @@
 
 //Settings
 
-bool print_to_screen = true;
+bool print_to_screen = false;
 
 // DIFINE PIN LOCATION
-#define DP1_sensor_pin A9
-#define PT1_sensor_pin A2
-#define PT2_sensor_pin A1
-#define torque_sensor_pin A5
+#define DP1_sensor_pin A0
+#define PT1_sensor_pin A1
+#define PT2_sensor_pin A2
+#define torque_sensor_pin A3
 #define flow_sensor_pin 2
 #define RPM_sensor_pin 3
 #define in1Pin 11
 #define in2Pin 10
 #define in3Pin 9
 #define in4Pin 8
-#define V_sensor_pin A14
-#define I_sensor_pin A15
+#define V_sensor_pin A4
+#define I_sensor_pin A5
 #define CC_CV_commend_pin 7
 
 //Initialize stepper motor
@@ -74,8 +74,8 @@ float torque_sensor_voltage = 0;
 float torque = 0.0;
 
 // TIMER VARIABLES
-const float sample_time_analog = 500.0; // in ms
-const float sample_time_digital = 500.0;   // in ms
+const float sample_time_analog = 100.0; // in ms
+const float sample_time_digital = 100.0;   // in ms
 float sensor_read_time = 0.0; // in seconds
 float start_time = 0.0;
 
@@ -96,18 +96,18 @@ void setup() {
   pinMode(I_sensor_pin, INPUT);
   pinMode(CC_CV_commend_pin, OUTPUT);
 
-  start_time = millis()/1000;
+  start_time = millis()/1000.0;
   
   motor.setSpeed(5);
   
-  Serial.begin (38400);
+  Serial.begin (9600);
 }
 
 
 void loop() {
   
   //Read all sensors sequencially
-  sensor_read_time = (millis()/1000 - start_time);
+  sensor_read_time = (millis()/1000.0 - start_time);
   DP1_sensor_voltage = analog_read(DP1_sensor_pin);
   PT1_sensor_voltage = analog_read(PT1_sensor_pin);
   PT2_sensor_voltage = analog_read(PT2_sensor_pin);
@@ -131,7 +131,7 @@ void loop() {
     read_input_commends_with_prompt();
     print_to_monitor();
   }else{
-    read_input_commends_no_prompt
+    read_input_commends_no_prompt();
     print_to_text();
   }
   
@@ -264,23 +264,23 @@ float analog_mapping(float V_out, float V_max, float V_min, float out_max, float
 void print_to_monitor(){
   
     Serial.print("time: ");
-    Serial.println(sensor_read_time);
+    Serial.println(sensor_read_time,4);
     Serial.print("DP1: ");
-    Serial.println(DP1);
+    Serial.println(DP1,4);
     Serial.print("PT1: ");
-    Serial.println(PT1);
+    Serial.println(PT1,4);
     Serial.print("PT2: ");   
-    Serial.println(PT2); 
+    Serial.println(PT2,4); 
     Serial.print("torque: " );
-    Serial.println(torque);
+    Serial.println(torque,4);
     Serial.print("V: ");   
-    Serial.println(V);
+    Serial.println(V,4);
     Serial.print("I: ");   
-    Serial.println(I); 
+    Serial.println(I,4); 
     Serial.print("RPM: ");
-    Serial.println(RPM);
+    Serial.println(RPM,4);
     Serial.print("GPM: ");  
-    Serial.println(GPM);
+    Serial.println(GPM,4);
     Serial.print("GV angle:");   
     Serial.println(GV_angle);      
     Serial.println( );                 
@@ -288,15 +288,15 @@ void print_to_monitor(){
 
 void print_to_text(){
 
-    Serial.println(sensor_read_time);
-    Serial.println(DP1);
-    Serial.println(PT1);
-    Serial.println(PT2);
-    Serial.println(torque); 
-    Serial.println(V);
-    Serial.println(I);  
-    Serial.println(RPM);
-    Serial.println(GPM);
+    Serial.println(sensor_read_time,4);
+    Serial.println(DP1,4);
+    Serial.println(PT1,4);
+    Serial.println(PT2,4);
+    Serial.println(torque,4); 
+    Serial.println(V,4);
+    Serial.println(I,4);  
+    Serial.println(RPM,4);
+    Serial.println(GPM,4);
     Serial.println(GV_angle);              
 }
 
