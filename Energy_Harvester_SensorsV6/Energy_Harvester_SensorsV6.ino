@@ -178,21 +178,21 @@ void read_input_commends_with_prompt(){
   if (Serial.available()){
     char c = Serial.read();  //gets one byte from serial buffer
     char temp = Serial.read();
-    if (c == 'G'){
+    if (c == 'g'){
       int deg = Serial.parseInt(); // pos is close, neg is open
       while (deg <= 0){
         deg = Serial.parseInt();
       }
       move_GV(deg);
       }
-     else if (c == 'I'){
+     else if (c == 'i'){
       float cur = Serial.parseFloat();
       while (cur <= 0.0){
         cur = Serial.parseFloat();
       }
       set_current(cur);
      }
-     else if (c =='V'){
+     else if (c =='v'){
       float vol = Serial.parseFloat();
       while (vol <= 0.0){
         vol = Serial.parseFloat();
