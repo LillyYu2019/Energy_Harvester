@@ -1,7 +1,7 @@
 /*
  Energy Harvester Data Recording 
  Justin and Lilly
- 2019-11-15
+ 2019-11-21
  
  Output the following to be read by MATLAB:
   -PP1
@@ -74,8 +74,8 @@ float torque_sensor_voltage = 0;
 float torque = 0.0;
 
 // TIMER VARIABLES
-const float sample_time_analog = 100.0; // in ms
-const float sample_time_digital = 100.0;   // in ms
+const float sample_time_analog = 50.0; // in ms
+const float sample_time_digital = 50.0;   // in ms
 float sensor_read_time = 0.0; // in seconds
 float start_time = 0.0;
 
@@ -145,7 +145,7 @@ void read_input_commends_with_prompt(){
     if (c == 'G'){
       Serial.println("Please enter GV angle, pos is cose, neg is open");
       int deg = Serial.parseInt(); // pos is close, neg is open
-      while (deg <= 0){
+      while (deg <= 0 && deg > -0.1){
         deg = Serial.parseInt();
       }
       move_GV(deg);
@@ -180,7 +180,7 @@ void read_input_commends_with_prompt(){
     char temp = Serial.read();
     if (c == 'g'){
       int deg = Serial.parseInt(); // pos is close, neg is open
-      while (deg <= 0){
+      while (deg <= 0 && deg > -0.1){
         deg = Serial.parseInt();
       }
       move_GV(deg);
