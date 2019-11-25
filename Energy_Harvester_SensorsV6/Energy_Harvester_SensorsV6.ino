@@ -30,18 +30,18 @@
 bool print_to_screen = false;
 
 // DIFINE PIN LOCATION
-#define DP1_sensor_pin A0
-#define PT1_sensor_pin A1
-#define PT2_sensor_pin A2
-#define torque_sensor_pin A3
+#define DP1_sensor_pin A9
+#define PT1_sensor_pin A2
+#define PT2_sensor_pin A1
+#define torque_sensor_pin A5
 #define flow_sensor_pin 2
 #define RPM_sensor_pin 3
 #define in1Pin 11
 #define in2Pin 10
 #define in3Pin 9
 #define in4Pin 8
-#define V_sensor_pin A4
-#define I_sensor_pin A5
+#define V_sensor_pin A14
+#define I_sensor_pin A15
 #define CC_CV_commend_pin 7
 
 //Initialize stepper motor
@@ -74,8 +74,8 @@ float torque_sensor_voltage = 0;
 float torque = 0.0;
 
 // TIMER VARIABLES
-const float sample_time_analog = 50.0; // in ms
-const float sample_time_digital = 50.0;   // in ms
+float sample_time_analog = 50.0; // in ms
+float sample_time_digital = 50.0;   // in ms
 float sensor_read_time = 0.0; // in seconds
 float start_time = 0.0;
 
@@ -123,7 +123,7 @@ void loop() {
   PT2 = analog_mapping(PT2_sensor_voltage, 5, 1, 100, 0);//psi
   torque = analog_mapping(torque_sensor_voltage, 5, 0, 2000, 0);//mNm
   V = analog_mapping(V_voltage, 5, 0, 30, 0.2); //V
-  I = analog_mapping(I_voltage, 5, 0, 60, 0.2); //Amps
+  I = analog_mapping(I_voltage, 5, 0, 60, 0.15); //Amps
   RPM = RPM_counter / 2.0 * 60.0;  //new Exon motor only has one pole, turbine speed in RPM
   GPM = flow_counter / K / 2.0 * 60.0; //flowrate in GPM
 
@@ -145,7 +145,7 @@ void read_input_commends_with_prompt(){
     if (c == 'G'){
       Serial.println("Please enter GV angle, pos is cose, neg is open");
       int deg = Serial.parseInt(); // pos is close, neg is open
-      while (deg <= 0 && deg > -0.1){
+      if (deg <= 0 && deg > -0.1){
         deg = Serial.parseInt();
       }
       move_GV(deg);
@@ -180,24 +180,28 @@ void read_input_commends_with_prompt(){
     char temp = Serial.read();
     if (c == 'g'){
       int deg = Serial.parseInt(); // pos is close, neg is open
-      while (deg <= 0 && deg > -0.1){
-        deg = Serial.parseInt();
+      if (deg > 0 || deg < -0.1){
+        move_GV(deg);
       }
-      move_GV(deg);
-      }
+     }
      else if (c == 'i'){
       float cur = Serial.parseFloat();
-      while (cur <= 0.0){
-        cur = Serial.parseFloat();
+      if (cur > 0.0){
+        set_current(cur);
       }
-      set_current(cur);
      }
      else if (c =='v'){
       float vol = Serial.parseFloat();
-      while (vol <= 0.0){
-        vol = Serial.parseFloat();
+      if (vol > 0.0){
+        set_voltage(vol);
       }
-      set_voltage(vol);
+     }
+     else if (c=='s'){
+      float sample = Serial.parseFloat();
+      if (sample > 0.0){
+        sample_time_analog = sample;
+        sample_time_digital = sample;
+      }
      }
   }
  }
@@ -287,16 +291,26 @@ void print_to_monitor(){
 }
 
 void print_to_text(){
-
+  
+    Serial.print("t ");
     Serial.println(sensor_read_time,4);
+    Serial.print("DP1 ");
     Serial.println(DP1,4);
+    Serial.print("PT1 ");
     Serial.println(PT1,4);
+    Serial.print("PT2 ");
     Serial.println(PT2,4);
+    Serial.print("tor ");
     Serial.println(torque,4); 
+    Serial.print("V ");
     Serial.println(V,4);
-    Serial.println(I,4);  
+    Serial.print("I ");
+    Serial.println(I,4);
+    Serial.print("RPM ");  
     Serial.println(RPM,4);
+    Serial.print("GPM ");
     Serial.println(GPM,4);
+    Serial.print("GV ");
     Serial.println(GV_angle);              
 }
 

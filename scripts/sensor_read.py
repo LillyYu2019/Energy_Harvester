@@ -30,8 +30,9 @@ class sensor_recorder(object):
         self.record_ = True
 
         self.headers_ = ['Time (sec)', 'DP1 (psi)','PT1 (psi)','PT2 (psi)', 'Torque (mNm)','V (V)', 'I (A)', 'Speed (RPM)', 'Flow Rate (GPM)', 'GV Angle (deg)']
+        self.identifier_ = ['t', 'DP1', 'PT1', 'PT2', 'tor', 'V', 'I', 'RPM', 'GPM', 'GV']
         self.data_ = []
-        for i in range(10):
+        for i in range(len(self.headers_)):
             self.data_.append([])
 
         self.last_print_time_ = datetime.now()
@@ -41,6 +42,7 @@ class sensor_recorder(object):
         self.save_rate_ = save_rate
         self.current_saves_ = save_rate
 
+        self.show_plot_ = False
         self.last_plot_time_ = datetime.now()
         self.plot_time_diff_ = plot_time
         self.ax_ = []
@@ -53,12 +55,22 @@ class sensor_recorder(object):
         Read serial port data line by line and save in internal variable
         '''
         for i in range(len(self.headers_)):
+            read_count = 0
+
             try:
-                line = float(ser.readline().decode("utf-8"))
-                self.data_[i].append(line)
-            except:
-                if i > 0:
+                line = ser.readline().decode("utf-8")
+                line_arr = line.split()
+                while line_arr[0] != self.identifier_[i] and read_count < 5:
+                    read_count += 1
+                    line = ser.readline().decode("utf-8")
+                    line_arr = line.split()
+                
+                if read_count < 5:
+                    self.data_[i].append(float(line_arr[-1]))
+                else:
                     self.data_[i].append(0.0)
+            except:
+                self.data_[i].append(0.0)
 
         return True
 
@@ -121,6 +133,9 @@ class sensor_recorder(object):
         elif s == 'v':
             command = input("Please enter desired voltage (0 to 30V): ")
 
+        elif s == 's':
+            command = input("Please enter sampling time (ms): ")
+
         elif s == 'p':
             self.record_ = not self.record_
             if not self.record_:
@@ -140,8 +155,17 @@ class sensor_recorder(object):
                     ax_set['xmin'] = self.data_[0][-5]
             return False
 
+        elif s == 'l':
+            self.show_plot_ = not self.show_plot_
+            if self.show_plot_:
+                plt.ion()
+                plt.show()
+            else:
+                plt.close('all')
+            return False
+
         else:
-            print("Please press:\n  g - GV settings\n  i - current settings\n  v - voltage settings\n  p - pause recording\n  s - save current data\n")
+            print("Please press:\n  g - GV settings\n  i - current settings\n  v - voltage settings\n  p - pause or restart recording\n s - save current data\n l - show or hide plots\n x - resize plots' x-axis")
             return False
 
         ser.write((s+'\n'+command).encode("utf-8"))
@@ -193,8 +217,6 @@ class sensor_recorder(object):
                 self.plt_obj_.append(obj)
 
             plt.tight_layout()
-            plt.ion()
-            plt.show()
 
         elif self.length() > 1:
             current_time = datetime.now()
@@ -222,13 +244,14 @@ class sensor_recorder(object):
 
                 self.last_plot_time_  = current_time
 
-                plt.pause(self.plot_time_diff_ *0.5)
+                if self.show_plot_:
+                    plt.pause(self.plot_time_diff_ *0.5)
 
 
 
 if __name__ == '__main__':
 
-    serial_port = 'COM3'
+    serial_port = 'COM4'
     baud_rate = 9600; #In arduino, Serial.begin(baud_rate)
     write_to_file_path = r"C:\Users\lilly\OneDrive\Documents\1.0_Graduate_Studies\5.0 Energy havester\5.8_code\Energy_Harvester\Data"
     file_name = r"\2019_11_20.csv"
