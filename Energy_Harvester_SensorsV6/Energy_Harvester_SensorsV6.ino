@@ -27,13 +27,13 @@
 
 //Settings
 
-bool print_to_screen = false;
+bool print_to_screen = true;
 
 // DIFINE PIN LOCATION
 #define DP1_sensor_pin A9
 #define PT1_sensor_pin A2
 #define PT2_sensor_pin A1
-#define torque_sensor_pin A5
+#define torque_sensor_pin A12
 #define flow_sensor_pin 2
 #define RPM_sensor_pin 3
 #define in1Pin 11
@@ -74,8 +74,8 @@ float torque_sensor_voltage = 0;
 float torque = 0.0;
 
 // TIMER VARIABLES
-float sample_time_analog = 50.0; // in ms
-float sample_time_digital = 50.0;   // in ms
+float sample_time_analog = 500.0; // in ms
+float sample_time_digital = 500.0;   // in ms
 float sensor_read_time = 0.0; // in seconds
 float start_time = 0.0;
 
@@ -111,7 +111,7 @@ void loop() {
   DP1_sensor_voltage = analog_read(DP1_sensor_pin);
   PT1_sensor_voltage = analog_read(PT1_sensor_pin);
   PT2_sensor_voltage = analog_read(PT2_sensor_pin);
-  torque_sensor_voltage = analog_read(torque_sensor_voltage);
+  torque_sensor_voltage = analog_read(torque_sensor_pin);
   V_voltage = analog_read(V_sensor_pin);
   I_voltage = analog_read(I_sensor_pin);
   RPM_counter = digital_read(RPM_sensor_pin);
@@ -187,6 +187,8 @@ void read_input_commends_with_prompt(){
      else if (c == 'i'){
       float cur = Serial.parseFloat();
       if (cur > 0.0){
+        Serial.print("cur sent ");
+        Serial.println(cur); 
         set_current(cur);
       }
      }
@@ -216,6 +218,7 @@ void move_GV (int deg){
 
 void set_current(float cur){
   int commend = cur/60.0*255.0;
+  Serial.println(commend);
   analogWrite(CC_CV_commend_pin, commend);
 }
 
@@ -276,7 +279,7 @@ void print_to_monitor(){
     Serial.print("PT2: ");   
     Serial.println(PT2,4); 
     Serial.print("torque: " );
-    Serial.println(torque,4);
+    Serial.println(torque);
     Serial.print("V: ");   
     Serial.println(V,4);
     Serial.print("I: ");   
