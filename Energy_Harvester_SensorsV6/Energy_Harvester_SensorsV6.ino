@@ -27,7 +27,7 @@
 
 //Settings
 
-bool print_to_screen = true;
+bool print_to_screen = false;
 
 // DIFINE PIN LOCATION
 #define DP1_sensor_pin A9
@@ -46,7 +46,7 @@ bool print_to_screen = true;
 
 //Initialize stepper motor
 HalfStepper motor(200, in1Pin, in2Pin, in3Pin, in4Pin); //Nema17 stepper motor
-int GV_angle = 0;
+int GV_angle = 3;
 
 // PRESSURE SENSOR VARIABLES
 float DP1_sensor_voltage = 0.0;
@@ -74,10 +74,11 @@ float torque_sensor_voltage = 0;
 float torque = 0.0;
 
 // TIMER VARIABLES
-float sample_time_analog = 500.0; // in ms
-float sample_time_digital = 500.0;   // in ms
+const int num_of_sensors = 8;
 float sensor_read_time = 0.0; // in seconds
 float start_time = 0.0;
+float sample_time_init = 3.0; // in ms
+float sample_time[num_of_sensors]; 
 
 
 void setup() {
@@ -96,6 +97,12 @@ void setup() {
   pinMode(I_sensor_pin, INPUT);
   pinMode(CC_CV_commend_pin, OUTPUT);
 
+  for (byte i = 0; i < num_of_sensors; i++) {
+    sample_time[i] = sample_time_init;
+  }
+  sample_time[6] = 100.0;
+  sample_time[7] = 100.0;
+  
   start_time = millis()/1000.0;
   
   motor.setSpeed(5);
@@ -108,14 +115,14 @@ void loop() {
   
   //Read all sensors sequencially
   sensor_read_time = (millis()/1000.0 - start_time);
-  DP1_sensor_voltage = analog_read(DP1_sensor_pin);
-  PT1_sensor_voltage = analog_read(PT1_sensor_pin);
-  PT2_sensor_voltage = analog_read(PT2_sensor_pin);
-  torque_sensor_voltage = analog_read(torque_sensor_pin);
-  V_voltage = analog_read(V_sensor_pin);
-  I_voltage = analog_read(I_sensor_pin);
-  RPM_counter = digital_read(RPM_sensor_pin);
-  flow_counter = digital_read(flow_sensor_pin);
+  DP1_sensor_voltage = analog_read(DP1_sensor_pin, sample_time[0]);
+  PT1_sensor_voltage = analog_read(PT1_sensor_pin, sample_time[1]);
+  PT2_sensor_voltage = analog_read(PT2_sensor_pin,sample_time[2]);
+  torque_sensor_voltage = analog_read(torque_sensor_pin,sample_time[3]);
+  V_voltage = analog_read(V_sensor_pin,sample_time[4]);
+  I_voltage = analog_read(I_sensor_pin,sample_time[5]);
+  RPM_counter = digital_read(RPM_sensor_pin,sample_time[6]);
+  flow_counter = digital_read(flow_sensor_pin, sample_time[7]);
   
   // SENSOR mapping of the average reading
   DP1 = analog_mapping(DP1_sensor_voltage, 5, 0, 30, 0); //psi
@@ -123,7 +130,7 @@ void loop() {
   PT2 = analog_mapping(PT2_sensor_voltage, 5, 1, 100, 0);//psi
   torque = analog_mapping(torque_sensor_voltage, 5, 0, 2000, 0);//mNm
   V = analog_mapping(V_voltage, 5, 0, 30, 0.2); //V
-  I = analog_mapping(I_voltage, 5, 0, 60, 0.15); //Amps
+  I = analog_mapping(I_voltage, 5, 0, 60, 0.0); //Amps
   RPM = RPM_counter / 2.0 * 60.0;  //new Exon motor only has one pole, turbine speed in RPM
   GPM = flow_counter / K / 2.0 * 60.0; //flowrate in GPM
 
@@ -198,11 +205,12 @@ void read_input_commends_with_prompt(){
         set_voltage(vol);
       }
      }
-     else if (c=='s'){
+     else if (c=='t'){
+      int sensor_pin = Serial.parseInt();
+      char temp = Serial.read();
       float sample = Serial.parseFloat();
       if (sample > 0.0){
-        sample_time_analog = sample;
-        sample_time_digital = sample;
+        sample_time[sensor_pin] = sample;
       }
      }
   }
@@ -218,7 +226,6 @@ void move_GV (int deg){
 
 void set_current(float cur){
   int commend = cur/60.0*255.0;
-  Serial.println(commend);
   analogWrite(CC_CV_commend_pin, commend);
 }
 
@@ -228,7 +235,7 @@ void set_voltage(float vol){
 }
 
 // Digital SENSOR read
-float digital_read(int port){
+float digital_read(int port, float sample_time_digital){
   
   float counter = 0.0;
   long t_current=millis();
@@ -247,7 +254,7 @@ float digital_read(int port){
   return counter /sample_time_digital*1000.0;
  }
 
-float analog_read(int port){
+float analog_read(int port, float sample_time_analog){
   
   float counter = 0.0;
   float sensor_voltage = 0.0;

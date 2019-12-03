@@ -68,8 +68,10 @@ class sensor_recorder(object):
                 if read_count < 5:
                     self.data_[i].append(float(line_arr[-1]))
                 else:
+                    print("Warning - read count > 5, read this: "+ line)
                     self.data_[i].append(0.0)
             except:
+                print("Warning read exception: "+ self.identifier_[i])
                 self.data_[i].append(0.0)
 
         return True
@@ -133,8 +135,14 @@ class sensor_recorder(object):
         elif s == 'v':
             command = input("Please enter desired voltage (0 to 30V): ")
 
-        elif s == 's':
-            command = input("Please enter sampling time (ms): ")
+        elif s == 't':
+            list_of_sensors =""
+            for i, sensor in enumerate(self.identifier_[1:]):
+                list_of_sensors = list_of_sensors + str(i) +" - " + sensor +"\n"
+            
+            command1 = input(list_of_sensors + "Please enter sensor number: ")
+            command2 = input("Please enter sampling time (ms): ")
+            command = command1 + "\n" + command2
 
         elif s == 'p':
             self.record_ = not self.record_
@@ -254,7 +262,7 @@ if __name__ == '__main__':
     serial_port = 'COM4'
     baud_rate = 9600; #In arduino, Serial.begin(baud_rate)
     write_to_file_path = r"C:\Users\lilly\OneDrive\Documents\1.0_Graduate_Studies\5.0 Energy havester\5.8_code\Energy_Harvester\Data"
-    file_name = r"\2019_11_28.csv"
+    file_name = r"\2019_12_02_C.csv"
 
     ser = serial.Serial(serial_port, baud_rate)
 
