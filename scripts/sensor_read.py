@@ -143,6 +143,9 @@ class sensor_recorder(object):
             command1 = input(list_of_sensors + "Please enter sensor number: ")
             command2 = input("Please enter sampling time (ms): ")
             command = command1 + "\n" + command2
+        
+        elif s == 'm':
+            commend = input("Please enter desired motor speed (0 to 10): ")
 
         elif s == 'p':
             self.record_ = not self.record_
@@ -173,7 +176,16 @@ class sensor_recorder(object):
             return False
 
         else:
-            print("Please press:\n  g - GV settings\n  i - current settings\n  v - voltage settings\n  p - pause or restart recording\n s - save current data\n l - show or hide plots\n x - resize plots' x-axis")
+            print("Please press:\n\
+                g - GV settings\n\
+                i - current settings\n\
+                v - voltage settings\n\
+                t - sampling time settings\n\
+                m - change motor speed\n\
+                p - pause or restart recording\n\
+                s - save current data\n\
+                l - show or hide plots\n\
+                x - resize plots' x-axis")
             return False
 
         ser.write((s+'\n'+command).encode("utf-8"))
@@ -262,7 +274,7 @@ if __name__ == '__main__':
     serial_port = 'COM4'
     baud_rate = 9600; #In arduino, Serial.begin(baud_rate)
     write_to_file_path = r"C:\Users\lilly\OneDrive\Documents\1.0_Graduate_Studies\5.0 Energy havester\5.8_code\Energy_Harvester\Data"
-    file_name = r"\2019_12_02_C.csv"
+    file_name = r"\2019_12_03.csv"
 
     ser = serial.Serial(serial_port, baud_rate)
 
