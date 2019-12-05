@@ -9,10 +9,10 @@ import numpy as np
 from matplotlib import pyplot as plt
 from datetime import datetime
 
+
 class sensor_recorder(object):
 
-    def __init__(self, print_time = 1, save_rate = 200, plot_time = 1, save_path="out"):
-
+    def __init__(self, print_time=1, save_rate=200, plot_time=1, save_path="out"):
         '''
         data content:
         data_[0] = sensor_read_time //sec
@@ -29,8 +29,10 @@ class sensor_recorder(object):
 
         self.record_ = True
 
-        self.headers_ = ['Time (sec)', 'DP1 (psi)','PT1 (psi)','PT2 (psi)', 'Torque (mNm)','V (V)', 'I (A)', 'Speed (RPM)', 'Flow Rate (GPM)', 'GV Angle (deg)']
-        self.identifier_ = ['t', 'DP1', 'PT1', 'PT2', 'tor', 'V', 'I', 'RPM', 'GPM', 'GV']
+        self.headers_ = ['Time (sec)', 'DP1 (psi)', 'PT1 (psi)', 'PT2 (psi)', 'Torque (mNm)',
+                         'V (V)', 'I (A)', 'Speed (RPM)', 'Flow Rate (GPM)', 'GV Angle (deg)']
+        self.identifier_ = ['t', 'DP1', 'PT1', 'PT2',
+                            'tor', 'V', 'I', 'RPM', 'GPM', 'GV']
         self.data_ = []
         for i in range(len(self.headers_)):
             self.data_.append([])
@@ -48,7 +50,8 @@ class sensor_recorder(object):
         self.ax_ = []
         self.ax_settings_ = []
         self.plt_obj_ = []
-        self.default_vis_setting_ = {'color': "blue", 'linestyle':'-', 'linewidth':1, 'picker': None}
+        self.default_vis_setting_ = {
+            'color': "blue", 'linestyle': '-', 'linewidth': 1, 'picker': None}
 
     def read(self, ser):
         '''
@@ -64,14 +67,14 @@ class sensor_recorder(object):
                     read_count += 1
                     line = ser.readline().decode("utf-8")
                     line_arr = line.split()
-                
+
                 if read_count < 5:
                     self.data_[i].append(float(line_arr[-1]))
                 else:
-                    print("Warning - read count > 5, read this: "+ line)
+                    print("Warning - read count > 5, read this: " + line)
                     self.data_[i].append(0.0)
             except:
-                print("Warning read exception: "+ self.identifier_[i])
+                print("Warning read exception: " + self.identifier_[i])
                 self.data_[i].append(0.0)
 
         return True
@@ -92,20 +95,20 @@ class sensor_recorder(object):
 
         if self.length() > 0:
             current_time = datetime.now()
-            diff_time = ( current_time - self.last_print_time_).total_seconds()
+            diff_time = (current_time - self.last_print_time_).total_seconds()
 
             if diff_time > self.print_time_diff_:
 
                 for i, dat in enumerate(self.data_):
-                    print(self.headers_[i] + ": " + str("%.3f" % round(dat[-1],3)))
+                    print(self.headers_[i] + ": " +
+                          str("%.3f" % round(dat[-1], 3)))
                 print('\n')
 
-                self.last_print_time_  = current_time
+                self.last_print_time_ = current_time
 
                 return diff_time
 
-    def save_data(self, exit = 0):
-
+    def save_data(self, exit=0):
         '''
         Save data in csv file every self.save_rate_ number of data points.
         Save all current values if 'exit' variable is set to true.
@@ -119,7 +122,7 @@ class sensor_recorder(object):
             data_df.to_csv(self.save_path_)
 
             self.current_saves_ = self.length() + self.save_rate_
-            
+
             print("##########################\nData saved!\n##########################\n")
 
             return True
@@ -127,7 +130,8 @@ class sensor_recorder(object):
     def user_input(self, ser, s):
 
         if s == 'g':
-            command = input("Please enter GV angle, pos is cose, neg is open: ")
+            command = input(
+                "Please enter GV angle, pos is cose, neg is open: ")
 
         elif s == 'i':
             command = input("please enter desired current (0 to 60A): ")
@@ -136,32 +140,36 @@ class sensor_recorder(object):
             command = input("Please enter desired voltage (0 to 30V): ")
 
         elif s == 't':
-            list_of_sensors =""
+            list_of_sensors = ""
             for i, sensor in enumerate(self.identifier_[1:]):
-                list_of_sensors = list_of_sensors + str(i) +" - " + sensor +"\n"
-            
+                list_of_sensors = list_of_sensors + \
+                    str(i) + " - " + sensor + "\n"
+
             command1 = input(list_of_sensors + "Please enter sensor number: ")
             command2 = input("Please enter sampling time (ms): ")
             command = command1 + "\n" + command2
-        
+
         elif s == 'm':
-            commend = input("Please enter desired motor speed (0 to 10): ")
+            command = input("Please enter desired motor speed (0 to 10): ")
 
         elif s == 'p':
             self.record_ = not self.record_
             if not self.record_:
-                print("\n##########################\nRecording paused!\n##########################\n")
+                print(
+                    "\n##########################\nRecording paused!\n##########################\n")
             else:
-                print("\n##########################\nRecording restarted!\n##########################\n")
+                print(
+                    "\n##########################\nRecording restarted!\n##########################\n")
             return False
 
         elif s == 's':
             self.save_data(exit=1)
             return False
 
-        elif s =='x':
+        elif s == 'x':
             if self.length() > 10:
-                print("\n##########################\nResetting plot!\n##########################\n")
+                print(
+                    "\n##########################\nResetting plot!\n##########################\n")
                 for ax_set in self.ax_settings_:
                     ax_set['xmin'] = self.data_[0][-5]
             return False
@@ -200,14 +208,13 @@ class sensor_recorder(object):
             y_min = ax_setting.get('ymin')
             y_max = ax_setting.get('ymax')
             y_range = y_max-y_min
-            ax_handle.set_ylim([y_min-margin*y_range,y_max+margin*y_range])
+            ax_handle.set_ylim([y_min-margin*y_range, y_max+margin*y_range])
 
         if ax_setting.get("xmin") is not None and ax_setting.get("xmax") is not None:
             x_min = ax_setting.get('xmin')
             x_max = ax_setting.get('xmax')
             x_range = x_max-x_min
-            ax_handle.set_xlim([x_min-margin*x_range,x_max+margin*x_range])
-
+            ax_handle.set_xlim([x_min-margin*x_range, x_max+margin*x_range])
 
     def live_plotter_init(self):
 
@@ -218,7 +225,8 @@ class sensor_recorder(object):
         for i, col in enumerate(self.headers_):
             if i > 0:
                 ax.append(plt.subplot(3, 3, i))
-                ax_settings.append({'title': col, 'ymin': 0.0, 'ymax': 0.0, 'xmin': 0.0,'xmax': 1.0})
+                ax_settings.append(
+                    {'title': col, 'ymin': 0.0, 'ymax': 0.0, 'xmin': 0.0, 'xmax': 1.0})
 
         self.ax_ = ax
         self.ax_settings_ = ax_settings
@@ -230,9 +238,9 @@ class sensor_recorder(object):
         if self.length() == 1:
             for i, ax in enumerate(self.ax_):
                 ax.set_title(self.ax_settings_[i].get('title'))
-                obj, = ax.plot(self.data_[0], self.data_[i+1], self.default_vis_setting_.get('linestyle'), \
-                            color=self.default_vis_setting_.get('color'), linewidth=self.default_vis_setting_.get('linewidth'), \
-                            picker=self.default_vis_setting_.get('picker'))
+                obj, = ax.plot(self.data_[0], self.data_[i+1], self.default_vis_setting_.get('linestyle'),
+                               color=self.default_vis_setting_.get('color'), linewidth=self.default_vis_setting_.get('linewidth'),
+                               picker=self.default_vis_setting_.get('picker'))
 
                 self.plt_obj_.append(obj)
 
@@ -240,8 +248,8 @@ class sensor_recorder(object):
 
         elif self.length() > 1:
             current_time = datetime.now()
-            diff_time = ( current_time - self.last_plot_time_).total_seconds()
-            
+            diff_time = (current_time - self.last_plot_time_).total_seconds()
+
             if diff_time > self.plot_time_diff_:
 
                 xmax = self.data_[0][-1]
@@ -254,31 +262,31 @@ class sensor_recorder(object):
                     ymin = min(self.data_[i+1])
 
                     if ymax > self.ax_settings_[i].get('ymax'):
-                        self.ax_settings_[i]['ymax'] = ymax 
-                    
+                        self.ax_settings_[i]['ymax'] = ymax
+
                     if ymin < self.ax_settings_[i].get('ymin'):
-                        self.ax_settings_[i]['ymin'] = ymin 
+                        self.ax_settings_[i]['ymin'] = ymin
 
                     self.ax_settings_[i]['xmax'] = xmax
                     self.resize(self.ax_[i], self.ax_settings_[i])
 
-                self.last_plot_time_  = current_time
+                self.last_plot_time_ = current_time
 
                 if self.show_plot_:
-                    plt.pause(self.plot_time_diff_ *0.5)
-
+                    plt.pause(self.plot_time_diff_ * 0.5)
 
 
 if __name__ == '__main__':
 
     serial_port = 'COM4'
-    baud_rate = 9600; #In arduino, Serial.begin(baud_rate)
+    baud_rate = 9600  # In arduino, Serial.begin(baud_rate)
     write_to_file_path = r"C:\Users\lilly\OneDrive\Documents\1.0_Graduate_Studies\5.0 Energy havester\5.8_code\Energy_Harvester\Data"
-    file_name = r"\2019_12_03.csv"
+    file_name = r"\2019_12_04_c.csv"
 
     ser = serial.Serial(serial_port, baud_rate)
 
-    data = sensor_recorder( print_time = 1, save_rate = 200, plot_time = 5, save_path = write_to_file_path + file_name)
+    data = sensor_recorder(print_time=1, save_rate=200,
+                           plot_time=5, save_path=write_to_file_path + file_name)
     data.live_plotter_init()
 
     atexit.register(data.save_data, exit=1)
@@ -286,17 +294,13 @@ if __name__ == '__main__':
     print("\n##########################\nStart reading!\n##########################\n")
 
     while True:
-        
+
         if msvcrt.kbhit():
-            s =  msvcrt.getch().decode("utf-8")
-            data.user_input(ser,s)
+            s = msvcrt.getch().decode("utf-8")
+            data.user_input(ser, s)
 
         if data.record_:
             data.read(ser)
             data.print_to_screen()
             data.save_data()
             data.live_plotter_update()
-                
-        
-
-

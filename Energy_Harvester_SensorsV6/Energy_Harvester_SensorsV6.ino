@@ -101,12 +101,12 @@ void setup()
     {
         sample_time[i] = sample_time_init;
     }
-    sample_time[6] = 100.0;
-    sample_time[7] = 100.0;
+    sample_time[6] = 200.0;
+    sample_time[7] = 200.0;
 
     start_time = millis() / 1000.0;
 
-    motor.setSpeed(2.5);
+    motor.setSpeed(5);
 
     Serial.begin(9600);
 }
