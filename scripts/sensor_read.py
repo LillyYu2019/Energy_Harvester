@@ -16,23 +16,26 @@ class sensor_recorder(object):
         '''
         data content:
         data_[0] = sensor_read_time //sec
-        data_[1] = DP1 //psi
-        data_[2] = PT1 //psi
-        data_[3] = PT2 //psi
-        data_[4] = torque //mNm
-        data_[5] = V //V
-        data_[6] = I //A
-        data_[7] = speed //RPM
-        data_[8] = flow_rate //GPM
-        data_[9] = GV_angle //deg
+        data_[1] = PT1 //psi
+        data_[2] = PT2 //psi
+        data_[3] = torque //mNm
+        data_[4] = V //V
+        data_[5] = I //A
+        data_[6] = speed //RPM
+        data_[7] = flow_rate //GPM
+        data_[8] = GV_angle //deg
         '''
 
         self.record_ = True
 
-        self.headers_ = ['Time (sec)', 'DP1 (psi)', 'PT1 (psi)', 'PT2 (psi)', 'Torque (mNm)',
-                         'V (V)', 'I (A)', 'Speed (RPM)', 'Flow Rate (GPM)', 'GV Angle (deg)']
-        self.identifier_ = ['t', 'DP1', 'PT1', 'PT2',
-                            'tor', 'V', 'I', 'RPM', 'GPM', 'GV']
+        self.headers_ = ['Time (sec)', 'PT1 (psi)', 'PT2 (psi)', 'V (V)', 'I (A)', 'Speed (RPM)'] #, 'Flow Rate (GPM)']
+        
+        # ['Time (sec)', 'PT1 (psi)', 'PT2 (psi)', 'Torque (mNm)',
+        #                  'V (V)', 'I (A)', 'Speed (RPM)', 'Flow Rate (GPM)', 'GV Angle (deg)']
+        self.identifier_ = ['t', 'PT1', 'PT2', 'V', 'I', 'RPM']#,'GPM']
+        
+        # ['t', 'PT1', 'PT2',
+        #                     'tor', 'V', 'I', 'RPM', 'GPM', 'GV']
         self.data_ = []
         for i in range(len(self.headers_)):
             self.data_.append([])
@@ -281,7 +284,7 @@ if __name__ == '__main__':
     serial_port = 'COM4'
     baud_rate = 9600  # In arduino, Serial.begin(baud_rate)
     write_to_file_path = r"C:\Users\lilly\OneDrive\Documents\1.0_Graduate_Studies\5.0 Energy havester\5.8_code\Energy_Harvester\Data"
-    file_name = r"\2019_12_04_c.csv"
+    file_name = r"\2019_12_13.csv"
 
     ser = serial.Serial(serial_port, baud_rate)
 
@@ -303,4 +306,4 @@ if __name__ == '__main__':
             data.read(ser)
             data.print_to_screen()
             data.save_data()
-            data.live_plotter_update()
+           # data.live_plotter_update()
