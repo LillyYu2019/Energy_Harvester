@@ -28,11 +28,11 @@ class sensor_recorder(object):
 
         self.record_ = True
 
-        self.headers_ = ['Time (sec)', 'PT1 (psi)', 'PT2 (psi)', 'V (V)', 'I (A)', 'Speed (RPM)'] #, 'Flow Rate (GPM)']
+        self.headers_ = ['Time (sec)', 'PT1 (psi)', 'PT2 (psi)', 'V (V)', 'I (A)', 'Speed (RPM)', 'Flow Rate (GPM)']
         
         # ['Time (sec)', 'PT1 (psi)', 'PT2 (psi)', 'Torque (mNm)',
         #                  'V (V)', 'I (A)', 'Speed (RPM)', 'Flow Rate (GPM)', 'GV Angle (deg)']
-        self.identifier_ = ['t', 'PT1', 'PT2', 'V', 'I', 'RPM']#,'GPM']
+        self.identifier_ = ['t', 'PT1', 'PT2', 'V', 'I', 'RPM','GPM']
         
         # ['t', 'PT1', 'PT2',
         #                     'tor', 'V', 'I', 'RPM', 'GPM', 'GV']

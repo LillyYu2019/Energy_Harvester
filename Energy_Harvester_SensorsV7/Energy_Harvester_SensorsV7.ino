@@ -76,7 +76,7 @@ float torque = 0.0;
 const int num_of_sensors = 7;
 float sensor_read_time = 0.0; // in seconds
 float start_time = 0.0;
-float sample_time_init = 5.0; // in ms
+float sample_time_init = 500.0; // in ms
 float sample_time[num_of_sensors];
 
 void setup()
@@ -98,8 +98,8 @@ void setup()
     {
         sample_time[i] = sample_time_init;
     }
-    sample_time[5] = 200.0;
-    sample_time[6] = 200.0;
+    sample_time[6] = 5000.0;
+    sample_time[7] = 500.0;
 
     start_time = millis() / 1000.0;
 
@@ -119,7 +119,7 @@ void loop()
     V_voltage = analog_read(V_sensor_pin, sample_time[4]);
     I_voltage = analog_read(I_sensor_pin, sample_time[5]);
     RPM_counter = digital_read(RPM_sensor_pin, sample_time[6]);
-    //flow_counter = digital_read(flow_sensor_pin, sample_time[7]);
+    flow_counter = digital_read(flow_sensor_pin, sample_time[7]);
 
     // SENSOR mapping of the average reading
     PT1 = analog_mapping(PT1_sensor_voltage, 5, 1, 100, 0);        //psi
@@ -128,7 +128,7 @@ void loop()
     V = analog_mapping(V_voltage, 5, 0, 30, 0.2);                  //V
     I = analog_mapping(I_voltage, 5, 0, 60, 0.0);                  //Amps
     RPM = RPM_counter / 2.0 * 60.0;                                //new Exon motor only has one pole, turbine speed in RPM
-    //GPM = flow_counter / K / 2.0 * 60.0;                           //flowrate in GPM
+    GPM = flow_counter / K / 2.0 * 60.0;                           //flowrate in GPM
 
     if (print_to_screen)
     {
@@ -340,8 +340,8 @@ void print_to_text()
     Serial.println(I, 4);
     Serial.print("RPM ");
     Serial.println(RPM, 4);
-//    Serial.print("GPM ");
-//    Serial.println(GPM, 4);
+    Serial.print("GPM ");
+    Serial.println(GPM, 4);
 //    Serial.print("GV ");
 //    Serial.println(GV_angle);
 }
