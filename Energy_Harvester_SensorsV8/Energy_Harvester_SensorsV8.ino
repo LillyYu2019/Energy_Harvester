@@ -41,8 +41,6 @@
 #define FLOWRATE_TIMEOUT_MILLIS 500    // Timeout duration before defaulting to zero angular velocity
 #define FLOWRATE_EDGES_TO_COUNT 4    // Number of edges to average duration over
 
-//Analog sensor variable:
-
 // PRESSURE SENSOR VARIABLES
 float PT1_sensor_voltage = 0.0;
 float PT2_sensor_voltage = 0.0;
