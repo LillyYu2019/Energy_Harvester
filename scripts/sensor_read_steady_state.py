@@ -30,12 +30,14 @@ class sensor_recorder(object):
         self.taking_steady_state_data_ = False
         self.SS_start_length_ = 0
 
-        self.headers_ = ['Time (sec)', 'PT1 (psi)', 'PT2 (psi)', 'V (V)', 'I (A)', 'Speed (RPM)', 'Flow Rate (GPM)']
+        self.headers_ = ['Time (sec)', 'PT1 (psi)', 'PT2 (psi)','torque (mNm)', 'V (V)', 'I (A)', 'Speed (RPM)', 'Flow Rate (GPM)', 'DP (psi)']
         
-        self.identifier_ = ['t', 'PT1', 'PT2', 'V', 'I', 'RPM','GPM']
+        self.identifier_ = ['t', 'PT1', 'PT2', 'tor', 'V', 'I', 'RPM','GPM']
 
         self.data_steady_state_ = []
         self.data_ = []
+        self.I_offset_ = 0.15
+        self.V_offset_ = 0.265
         
         for i in range(len(self.headers_)):
             self.data_.append([])
@@ -61,7 +63,7 @@ class sensor_recorder(object):
         '''
         Read serial port data line by line and save in internal variable
         '''
-        for i in range(len(self.headers_)):
+        for i in range(len(self.identifier_)):
             read_count = 0
 
             try:
@@ -73,13 +75,23 @@ class sensor_recorder(object):
                     line_arr = line.split()
 
                 if read_count < 5:
-                    self.data_[i].append(float(line_arr[-1]))
+                    if self.identifier_[i] == "I":
+                        val = float(line_arr[-1]) + self.I_offset_
+                    elif self.identifier_[i] == "V":
+                        val = float(line_arr[-1]) + self.V_offset_
+                    else:
+                        val = float(line_arr[-1])
+                    self.data_[i].append(val)
                 else:
                     print("Warning - read count > 5, read this: " + line)
                     self.data_[i].append(0.0)
+
             except:
                 print("Warning read exception: " + self.identifier_[i])
                 self.data_[i].append(0.0)
+
+            if self.identifier_[i] == "PT2":
+                self.data_[len(self.identifier_)].append(self.data_[1][-1]-self.data_[2][-1])
 
         return True
 
@@ -97,7 +109,7 @@ class sensor_recorder(object):
         Print latest recorded values to screen at every self.print_time_diff_ seconds
         '''
 
-        if self.length() > 0:
+        if self.length() > 1:
             current_time = datetime.now()
             diff_time = (current_time - self.last_print_time_).total_seconds()
 
@@ -114,7 +126,7 @@ class sensor_recorder(object):
 
                 return diff_time
 
-    def average_steady_state_data(self, SS_sample_time = 30):
+    def average_steady_state_data(self, SS_sample_time = 5):
         '''
         take an average reading over a sample time period and write to the
         steady state data array to be saved seperately
@@ -160,10 +172,18 @@ class sensor_recorder(object):
                 "Please enter GV angle, pos is cose, neg is open: ")
 
         elif s == 'i':
-            command = input("please enter desired current (0 to 60A): ")
+            print("current I offset: " + str("%.3f" % self.I_offset_))
+            offset = float(input("please enter desired current offset (0 to 60A): "))
+            if offset < 60.0:
+                self.I_offset_ = offset
+            return False
 
         elif s == 'v':
-            command = input("Please enter desired voltage (0 to 30V): ")
+            print("current V offset: " + str("%.3f" % self.V_offset_))
+            offset = float(input("Please enter desired voltage offset (0 to 30V): "))
+            if offset < 30.0:
+                self.V_offset_ = offset
+            return False
 
         elif s == 't':
             list_of_sensors = ""
@@ -256,7 +276,7 @@ class sensor_recorder(object):
         ax = []
         ax_settings = []
 
-        for i, col in enumerate(self.headers_):
+        for i, col in enumerate(self.identifier_):
             if i > 0:
                 ax.append(plt.subplot(3, 3, i))
                 ax_settings.append(
@@ -315,7 +335,7 @@ if __name__ == '__main__':
     serial_port = 'COM4'
     baud_rate = 9600  # In arduino, Serial.begin(baud_rate)
     write_to_file_path = r"C:\Users\lilly\OneDrive\Documents\1.0_Graduate_Studies\5.0 Energy havester\5.8_code\Energy_Harvester\Data"
-    file_name = r"\2019_01_07_a"
+    file_name = r"\2019_01_13_d"
 
     ser = serial.Serial(serial_port, baud_rate)
 

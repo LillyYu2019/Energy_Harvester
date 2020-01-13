@@ -36,10 +36,10 @@
 #define I_sensor_pin A15
 
 #define SPEED_TIMEOUT_MILLIS 500    // Timeout duration before defaulting to zero angular velocity
-#define SPEED_EDGES_TO_COUNT 4    // Number of edges to average duration over
+#define SPEED_EDGES_TO_COUNT 12    // Number of edges to average duration over
 
 #define FLOWRATE_TIMEOUT_MILLIS 500    // Timeout duration before defaulting to zero angular velocity
-#define FLOWRATE_EDGES_TO_COUNT 4    // Number of edges to average duration over
+#define FLOWRATE_EDGES_TO_COUNT 12    // Number of edges to average duration over
 
 // PRESSURE SENSOR VARIABLES
 float PT1_sensor_voltage = 0.0;
