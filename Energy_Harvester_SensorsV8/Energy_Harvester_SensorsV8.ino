@@ -39,7 +39,7 @@
 #define SPEED_EDGES_TO_COUNT 12    // Number of edges to average duration over
 
 #define FLOWRATE_TIMEOUT_MILLIS 500    // Timeout duration before defaulting to zero angular velocity
-#define FLOWRATE_EDGES_TO_COUNT 12    // Number of edges to average duration over
+#define FLOWRATE_EDGES_TO_COUNT 12  // Number of edges to average duration over
 
 // PRESSURE SENSOR VARIABLES
 float PT1_sensor_voltage = 0.0;

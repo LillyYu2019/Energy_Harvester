@@ -335,7 +335,7 @@ if __name__ == '__main__':
     serial_port = 'COM4'
     baud_rate = 9600  # In arduino, Serial.begin(baud_rate)
     write_to_file_path = r"C:\Users\lilly\OneDrive\Documents\1.0_Graduate_Studies\5.0 Energy havester\5.8_code\Energy_Harvester\Data"
-    file_name = r"\2019_01_13_d"
+    file_name = r"\2019_01_15_d"
 
     ser = serial.Serial(serial_port, baud_rate)
 
