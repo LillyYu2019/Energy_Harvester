@@ -1,18 +1,23 @@
+
+
 /*
  Energy Harvester Stepper motor control
  Justin and Lilly
- 2019-11-21
+ 2020-02-04
  
  GV stepper motor: Nema17
  Gear ratio: 148:18
 
+ GV stepper motor: Nema17 with gear box
+ outer Gear ratio: 78:18
+ inter gear box ratio: 99 1044/2057:1
+ 
  towards me is open
  away from me is close
  
  */
-
-
 #include <HalfStepper.h>
+#include <Stepper.h>
 
 #define in1Pin 11
 #define in2Pin 10
@@ -20,9 +25,9 @@
 #define in4Pin 8
 
 //Initialize stepper motor
-HalfStepper motor(200, in1Pin, in2Pin, in3Pin, in4Pin); //Nema17 stepper motor
+Stepper motor(200, in1Pin, in2Pin, in3Pin, in4Pin); //Nema17 stepper motor
 float GV_angle = 3.0;
-float motor_speed = 5.0;
+float motor_speed = 50.0;
 float sensor_read_time = 0.0; // in seconds
 float start_time = 0.0;
 
@@ -63,6 +68,7 @@ void read_input_commends_with_prompt()
             move_GV(deg);
             sensor_read_time = (millis() / 1000.0 - start_time);
             print_to_monitor();
+            Serial.println();
         }
         else if (c == 'S')
         {
@@ -84,8 +90,10 @@ void read_input_commends_with_prompt()
 
 void move_GV(float deg)
 {
-    float deg_ratio = deg * 148.0 / 18.0; //big gear #teeth = 148, small gear #teeth = 18
-    float steps_gear = deg_ratio / 0.9;   // half stepping
+    float deg_ratio = deg * 78.0 / 18.0 * 99.5075; //for NEMA17 with gearbox: 1 deg = 239.555 steps
+    float steps_gear = deg_ratio / 1.8;  
+    Serial.print("steps taken: ");
+    Serial.println(steps_gear, 2);
     GV_angle = GV_angle + deg;
     motor.step(steps_gear);
 }
@@ -97,5 +105,5 @@ void print_to_monitor()
     Serial.println(sensor_read_time, 4);
     Serial.print("GV angle:");
     Serial.println(GV_angle);
-    Serial.println();
+
 }
