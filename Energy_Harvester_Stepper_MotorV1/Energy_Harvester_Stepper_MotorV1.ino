@@ -1,9 +1,7 @@
-
-
 /*
  Energy Harvester Stepper motor control
  Justin and Lilly
- 2020-02-04
+ 2020-02-20
  
  GV stepper motor: Nema17
  Gear ratio: 148:18
@@ -16,13 +14,16 @@
  away from me is close
  
  */
-#include <HalfStepper.h>
+ 
 #include <Stepper.h>
+#include <SPI.h>
+#include "DAC_MCP49xx.h"
 
-#define in1Pin 11
-#define in2Pin 10
-#define in3Pin 9
-#define in4Pin 8
+#define in1Pin 6
+#define in2Pin 5
+#define in3Pin 4
+#define in4Pin 3
+#define SS_PIN 10
 
 //Initialize stepper motor
 Stepper motor(200, in1Pin, in2Pin, in3Pin, in4Pin); //Nema17 stepper motor
@@ -30,9 +31,13 @@ float GV_angle = 3.0;
 float motor_speed = 50.0;
 float sensor_read_time = 0.0; // in seconds
 float start_time = 0.0;
+float curr = 0.0;
 
-void setup() {
-  
+DAC_MCP49xx dac(DAC_MCP49xx::MCP4921, SS_PIN);
+
+void setup()
+{
+
     pinMode(in1Pin, OUTPUT);
     pinMode(in2Pin, OUTPUT);
     pinMode(in3Pin, OUTPUT);
@@ -42,11 +47,16 @@ void setup() {
 
     start_time = millis() / 1000.0;
 
+    dac.setSPIDivider(SPI_CLOCK_DIV16);
+    dac.setPortWrite(true);
+    dac.output(0);
+
     Serial.begin(9600);
 }
 
-void loop() {
-  read_input_commends_with_prompt();
+void loop()
+{
+    read_input_commends_with_prompt();
 }
 
 void read_input_commends_with_prompt()
@@ -72,18 +82,63 @@ void read_input_commends_with_prompt()
         }
         else if (c == 'S')
         {
-          Serial.println("Please enter GV speed (0 to 20): ");
-          float m_speed = Serial.parseFloat();
-          while (m_speed <= 0.1 || m_speed > 30.0)
+            Serial.println("Please enter GV speed (0 to 20): ");
+            float m_speed = Serial.parseFloat();
+            while (m_speed <= 0.1 || m_speed > 30.0)
             {
                 m_speed = Serial.parseFloat();
             }
             motor.setSpeed(m_speed);
         }
+        else if (c == 'C')
+        {
+            Serial.println("Please enter current setting (0 to 3): ");
+            curr = Serial.parseFloat();
+            while (curr <= 0.1 || curr > 60.0)
+            {
+                curr = Serial.parseFloat();
+            }
+            set_current(curr);
+        }
+        else if (c == 'w')
+        {
+            Serial.println("entered increase by 0.1 mode, enter 'w' to exit");
+            int someVariable = Serial.read();
+            while (someVariable != 119)
+            {
+                someVariable = Serial.read();
+                if (someVariable == 10)
+                {
+                    curr += 0.1;
+                    set_current(curr);
+                }
+            }
+            Serial.println("increase by 0.1 mode exited");
+        }
+        else if (c == 's')
+        {
+            Serial.println("entered decrease by 0.1 mode, enter 's' to exit");
+            int someVariable = Serial.read();
+            while (someVariable != 115)
+            {
+                someVariable = Serial.read();
+                if (someVariable == 10)
+                {
+                    curr -= 0.1;
+                    set_current(curr);
+                }
+            }
+            Serial.println("decrease by 0.1 mode exited");
+        }
+        else if (c == 'D')
+        {
+          curr = 0.0;
+          dac.output(0);
+        }
         else if (c != '\n')
         {
-          Serial.println(c);
-          Serial.println("Please enter G for GV, S for motor speed settings");
+            Serial.println(c);
+            Serial.println("Please enter G for GV, S for motor speed settings");
         }
     }
 }
@@ -91,13 +146,22 @@ void read_input_commends_with_prompt()
 void move_GV(float deg)
 {
     float deg_ratio = deg * 78.0 / 18.0 * 99.5075; //for NEMA17 with gearbox: 1 deg = 239.555 steps
-    float steps_gear = deg_ratio / 1.8;  
+    float steps_gear = deg_ratio / 1.8;
     Serial.print("steps taken: ");
     Serial.println(steps_gear, 2);
     GV_angle = GV_angle + deg;
     motor.step(steps_gear);
 }
 
+void set_current(float cur)
+{
+    int commend = (cur+0.015) / 60.0 * 4095.0;
+    dac.output(commend);
+    Serial.print("current desired: ");
+    Serial.println(cur, 3);
+    Serial.print("PWM signal: ");
+    Serial.println(commend);
+}
 void print_to_monitor()
 {
 
@@ -105,5 +169,4 @@ void print_to_monitor()
     Serial.println(sensor_read_time, 4);
     Serial.print("GV angle:");
     Serial.println(GV_angle);
-
 }

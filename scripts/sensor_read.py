@@ -30,7 +30,7 @@ class sensor_recorder(object):
         self.taking_steady_state_data_ = False
         self.SS_start_length_ = 0
 
-        self.headers_ = ['Time (sec)', 'PT1 (psi)', 'PT2 (psi)','torque (mNm)', 'V (V)', 'I (A)', 'Speed (RPM)', 'Flow Rate (GPM)', 'DP (psi)', 'GV (deg)']
+        self.headers_ = ['Time (sec)', 'PT1 (psi)', 'PT2 (psi)','torque (mNm)', 'V (V)', 'I (A)', 'Speed (RPM)', 'Flow Rate (GPM)', 'GV (deg)', 'DP (psi)']
         
         self.identifier_ = ['t', 'PT1', 'PT2', 'tor', 'V', 'I', 'RPM','GPM', 'GV']
 
@@ -134,7 +134,7 @@ class sensor_recorder(object):
         if self.taking_steady_state_data_:
             if self.data_[0][-1] - self.data_[0][self.SS_start_length_-1] > SS_sample_time:
                 self.data_steady_state_[0].append(self.data_[0][self.SS_start_length_-1])
-                for i in range(len(self.identifier_)-1):
+                for i in range(len(self.headers_)-1):
                     self.data_steady_state_[i+1].append(np.average(self.data_[i+1][self.SS_start_length_-1:]))
                 self.taking_steady_state_data_ = False
                 print("##########################\nSS Data saved!\n##########################\n")
@@ -335,13 +335,13 @@ if __name__ == '__main__':
     serial_port = 'COM4'
     baud_rate = 9600  # In arduino, Serial.begin(baud_rate)
     write_to_file_path = r"C:\Users\lilly\OneDrive\Documents\1.0_Graduate_Studies\5.0 Energy havester\5.8_code\Energy_Harvester\Data"
-    file_name = r"\2019_02_07"
+    file_name = r"\2020_02_22"
 
     ser = serial.Serial(serial_port, baud_rate)
 
     data = sensor_recorder(print_time=1, save_rate=200,
                            plot_time=5, save_path=write_to_file_path + file_name)
-    data.live_plotter_init()
+    #data.live_plotter_init()
 
     atexit.register(data.save_data, exit=1)
 

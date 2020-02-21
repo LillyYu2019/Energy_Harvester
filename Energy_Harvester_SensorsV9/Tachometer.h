@@ -25,9 +25,9 @@ public:
 
 	// functions
 	void read();
-	void incrementEdge();
+	void increment_edge();
 	float get_readings();
-	float get_sample_time();
+	float get_sample_time(); //in ms
 
 private:
 	//private variables
@@ -35,7 +35,8 @@ private:
 	int target_sample_count_;
 	float k_;
 	float time_out_limit_;
-	float startMicros_, durationMicros_;
+	float start_micros_;
+	float duration_micros_;
 	float reading_;
 
 	//private functions

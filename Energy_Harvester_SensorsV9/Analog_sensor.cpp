@@ -41,12 +41,12 @@ void Analog_sensor::map()
     sample_time_ = millis() - start_time_;
 }
 
-float Analog_sensor::getreading_s()
+float Analog_sensor::get_readings()
 {
     return reading_;
 }
 
-float Analog_sensor::getsample_time_()
+float Analog_sensor::get_sample_time()
 {
     return sample_time_;
 }

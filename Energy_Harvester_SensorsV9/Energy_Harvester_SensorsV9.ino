@@ -29,34 +29,35 @@
 #include "Analog_sensor.h"
 
 //Global settings
+const bool print_sample_time = false;
 const int total_num_sensors = 8;
 const String sensor_names[] = {"PT1", "PT2", "tor", "V", "I", "RPM", "GPM", "GV"};
-const float target_sample_time = 300.0; //ms
+const float target_sample_time = 200.0; //ms
 const int decimal_places = 4;
 
 //Analog sensor settings
 const int num_analog_sensors = 5;
-const int analog_target_samples = 30;
-const int analog_pins[num_analog_sensors] = {A2, A1, A12, A14, A15};
+const int analog_target_samples = 120;
+const int analog_pins[num_analog_sensors] = {A0, A1, A13, A14, A15};
 float analog_range[num_analog_sensors][4] = {
     {5, 1, 100, 0},      //psi
     {5, 1, 100, 0},      //psi
     {5, 0, 2000, 7.885}, //mNm
-    {5, 0, 30, 0.465},   //V
-    {5, 0, 60, 0.15},    //A
+    {5, 0, 30, 0.0},     //V
+    {5, 0, 60, 0.0},    //A
 };
 
 //Digital sensor settings
 const int num_digital_sensors = 2;
 const float digital_time_out_limit = 1000; //ms
-const int digital_pins[num_digital_sensors] = {3, 2};
+const int digital_pins[num_digital_sensors] = {2, 3};
 const int digital_target_samples[num_digital_sensors] = {20, 40};
 const float digital_k[num_digital_sensors] = {1.0 / 2.0 * 60.0, 1.0 / 2.0 / 246.7 * 60.0};
 
 //Encoder settings
 const int num_encoders = 1;
 const int encoder_pins[num_encoders][2] = {{18, 19}};
-const float encoder_k[num_encoders] = {-1.0 / 4.0 / 600.0 * 200.0 * 1.8 / 99.5075 * 18.0 / 78.0}; // 4x readings, motors has 200 ticks, encoder has 600 ticks
+const float encoder_k[num_encoders] = {-1.0 / 4.0 / 600.0 * 200.0 * 1.8 / 99.5075 * 30.0 / 114.0}; // 4x readings, motors has 200 ticks, encoder has 600 ticks
 
 //Global Variables
 float start_time;
@@ -152,12 +153,12 @@ void encoder_write()
 
 void incrementEdge1()
 {
-  Tachometer_list[0].incrementEdge();
+  Tachometer_list[0].increment_edge();
 }
 
 void incrementEdge2()
 {
-  Tachometer_list[1].incrementEdge();
+  Tachometer_list[1].increment_edge();
 }
 
 void print_to_serial()
@@ -169,4 +170,14 @@ void print_to_serial()
     Serial.print(sensor_names[i] + " ");
     Serial.println(sensor_readings[i], decimal_places);
   }
+  if (print_sample_time == true)
+    {
+      Serial.print("analog duration ");
+      Serial.println(Analog_sensor_list[0].get_sample_time(), decimal_places);
+      for (byte i = 0; i < num_digital_sensors; i++)
+      {
+        Serial.print(sensor_names[i + num_analog_sensors] + " duration ");
+        Serial.println(Tachometer_list[i].get_sample_time(), decimal_places);
+      }
+    }
 }

@@ -24,72 +24,62 @@ Tachometer::Tachometer(float digitalk_, int digital_target_samples, float time_o
 	tachometer_edges_ = 0;
 
 	clear();
-
-	startMicros_ = micros();
 }
 
-float Tachometer::getreading_s()
+float Tachometer::get_readings()
 {
 	return reading_;
 }
 
 float Tachometer::get_sample_time()
 {
-	return durationMicros_ / 1000.0;
+	return duration_micros_ / 1000.0;
 }
 
 void Tachometer::clear()
 {
 	reading_ = 0.0;
-	durationMicros_ = 0.0;
+	duration_micros_ = 0.0;
+	start_micros_ = micros();
 }
 
 void Tachometer::read()
 {
+	if ((micros() - start_micros_) / 1000.0 > time_out_limit_)
+	{
+		clear();
+		return;
+	}
+
 	if (tachometer_edges_ >= target_sample_count_)
 	{
 		int new_target = tachometer_edges_ + 1;
-		bool time_out_flag = false;
+		bool timer_stopped = false;
 
-		while (tachometer_edges_ < new_target) // Wait until an edge occurs
+		while ((micros() - start_micros_) / 1000.0 < time_out_limit_ && !timer_stopped)
 		{
-			if ((micros() - startMicros_) / 1000.0 > time_out_limit_)
+			if (tachometer_edges_ >= new_target)
 			{
-				time_out_flag = true;
-				break;
+				float current_time = micros();
+				duration_micros_ = current_time - start_micros_;
+				start_micros_ = current_time;
+				tachometer_edges_ = 1;
+				timer_stopped = true;
 			}
 		}
 
-		durationMicros_ = micros() - startMicros_;
-
-		while (tachometer_edges_ < 1) // Wait until an edge occurs
+		if (timer_stopped)
 		{
-			if ((micros() - startMicros_) / 1000.0 > time_out_limit_)
-			{
-				time_out_flag = true;
-				break;
-			}
-		}
-
-		startMicros_ = micros();
-		tachometer_edges_ = 1;
-
-		if (time_out_flag)
-		{
-			clear();
+			reading_ = k_ * 1000000.0 * float(new_target - 1) / float(duration_micros_);
 		}
 		else
 		{
-			reading_ = k_ * 1000000.0 * float(new_target - 1) / float(durationMicros_);
+			clear();
 		}
-	}
-	else if ((micros() - startMicros_) / 1000.0 > time_out_limit_)
-	{
-		clear();
 	}
 }
 
-void Tachometer::incrementEdge()
+void Tachometer::increment_edge()
 {
 	tachometer_edges_++;
 }

@@ -1,0 +1,17 @@
+2019_11 and 2019 _12
+old data, no sucessful sensor or dynamic data taken
+
+2019_01_13
+-first succsessful sensor and dynamic data taken 
+-with Nema17 no gear box
+
+2019_01_15
+-second succsessful sensor and dynamic data taken 
+-with Nema17 no gear box
+-data used for paper
+
+2020-02-12
+-new interupt routine, new encoder, new 100:1 gear ratio NEMA17 with big gear, works
+-a and a_SS is for steady state data only
+-b is for transient at 2 and 2.8 A
+-c is for backlash at 2.8A +5 and -5 deg
