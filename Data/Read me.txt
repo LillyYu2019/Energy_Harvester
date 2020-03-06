@@ -15,3 +15,9 @@ old data, no sucessful sensor or dynamic data taken
 -a and a_SS is for steady state data only
 -b is for transient at 2 and 2.8 A
 -c is for backlash at 2.8A +5 and -5 deg
+
+2020-02-21
+new load controlled through arduino, smaller stepper motor gear teeth, tighter shield
+-a: 39.9Hz, steady state and dynamic at 27GPM
+-b: 39.0HZ, steady state and dynamic at 26GPM
+-c: 38.0Hz, steady state and dynamic at 25GPM
