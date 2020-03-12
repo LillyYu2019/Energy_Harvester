@@ -5,8 +5,11 @@ import os
 import pandas as pd
 import numpy as np
 import pickle
+import itertools
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import axes3d
+
+from smt.surrogate_models import KRG, QP
 
 from sklearn.model_selection import ParameterGrid
 from sklearn.gaussian_process import GaussianProcessRegressor
@@ -92,15 +95,14 @@ class turbine_data(object):
 
         print("\ntotal num of transient data pts: " +str(total_data))
 
-    def get_limits(self):
+    def get_limits(self, x_headers):
 
         self.limits = []
 
-        GVs = self.steady_state_df['GV (deg)'].unique()
-        for GV_angle in GVs:
-            temp = [GV_angle]
-            temp.append(self.data_df[(self.data_df['GV (deg)'] == GV_angle)]['Speed (rad/s)'].min())
-            temp.append(self.data_df[(self.data_df['GV (deg)'] == GV_angle)]['Speed (rad/s)'].max())
+        for x in x_headers:
+            temp = []
+            temp.append(self.steady_state_df[x].min())
+            temp.append(self.steady_state_df[x].max())
             self.limits.append(temp)
         
         return self.limits
@@ -155,6 +157,8 @@ class SS_model_base(object):
         self.X_pred = X
         self.model_predict()
 
+        return  self.y_pred, self.y_std
+
     def train(self):
 
         self.X_train = self.X
@@ -197,6 +201,9 @@ class SS_model_GP(SS_model_base):
         self.scale = scale
         self.RBF_scale = RBF_scale
         self.noise = noise
+
+        # self.RBF_scale = [[0.885, 169, 1.25],
+        #                   [2.91, 174, 12.8]]
 
         self.kernel = self.scale * RBF(length_scale=self.RBF_scale, length_scale_bounds=(1e-3, 100000.0))\
                                     + WhiteKernel(noise_level=self.noise, noise_level_bounds=(1e-10, 1e+10))
@@ -262,43 +269,160 @@ class SS_model_GP(SS_model_base):
 
         self.update_hyperparameters(best_settings)
 
+class SS_model_KRG(SS_model_base):
+
+    def __init__(self, data, x_headers, y_header, RBF_scale = [2.91, 174, 12.8]):
+
+        super().__init__(data, x_headers, y_header)
+
+        self.RBF_scale = RBF_scale
+        self.model = KRG(theta0=RBF_scale, poly = 'quadratic', print_training=False,print_global=False)  
+
+    def update_hyperparameters(self, param):
+
+        self.RBF_scale = param
+        self.model = KRG(theta0=param, poly = 'quadratic', print_training=False,print_global=False)  
+
+    def get_hyperparameters(self):
+
+        return self.RBF_scale
+
+    def fit(self):
+
+        self.model.set_training_values(self.X_train, self.y_train)
+        self.model.train()
+
+    def model_predict(self):
+
+        X = np.array(self.X_pred)
+        self.y_pred = self.model.predict_values(X)
+        self.y_std = self.model.predict_variances(X)
+
+class SS_model_QP(SS_model_base):
+
+    def __init__(self, data, x_headers, y_header):
+
+        super().__init__(data, x_headers, y_header)
+
+        self.model = QP(print_training=False,print_global=False)  
+
+    def get_hyperparameters(self):
+
+        return "quadratic model"
+
+    def fit(self):
+
+        self.model.set_training_values(self.X_train, self.y_train)
+        self.model.train()
+
+    def model_predict(self):
+
+        X = np.array(self.X_pred)
+        self.y_pred = self.model.predict_values(X)
+        self.y_std = None
+
+
 class SS_model(object):
 
-    def __init__(self, input_var, output_var, data = None):
+    def __init__(self, data = None, load_model = True, model = 'KRG'):
 
         self.models = []
+        self.models_dict = {}
+        self.model_type = model
+        self.data = data
         self.path = "SS_models/"
-        self.x_headers = input_var
-        self.y_headers = output_var
 
-        print("\ninputs: "+ '['+' | '.join(input_var) +']')
-        print("outputs: "+ '['+' | '.join(output_var)+']')
+        self.variables = ['DP (psi)', 'Speed (rad/s)', 'Flow Rate (GPM)', 'GV (deg)', 'torque (mNm)']
+        self.inputs = list(itertools.combinations(self.variables,3))
+        self.outputs = list(itertools.combinations(self.variables,2))[::-1]
 
-        if data == None:
+        if load_model:
             self.load_models()
         else:
-            for y in output_var:
-                self.models.append(SS_model_GP(data, input_var, y))
+            self.init()
+
+        #model constants:
+        self.torque_constant = 46.541 #mNm/A
+        self.torque_resistance = 10.506 #mNm
+        self.RPM_to_radpersec = 0.104719755
+
+        #current state:
+        self.x = {}
+        self.y = {}
+
+    def clear(self):
+        self.x = {}
+        self.y = {}
+
+    def init(self):
+
+        for i, inp in enumerate(self.inputs):
+            self.models_dict[inp] = {}
+            for out in self.outputs[i]:
+                if self.model_type == 'GP':
+                    self.models_dict[inp][out] = SS_model_GP(self.data, inp, out)
+                    self.models.append(self.models_dict[inp][out])
+                elif self.model_type == 'KRG':
+                    self.models_dict[inp][out] = SS_model_KRG(self.data, inp, out)
+                    self.models.append(self.models_dict[inp][out])
+                elif self.model_type == 'QP':
+                    self.models_dict[inp][out] = SS_model_QP(self.data, inp, out)
+                    self.models.append(self.models_dict[inp][out])
+    
+    def RPM_to_rads(self, RPM):
+
+        return RPM*self.RPM_to_radpersec
+
+    def torque_to_current(self, torque):
+
+        return (torque - self.torque_resistance) / self.torque_constant
+
+    def current_to_torque(self, current):
+
+        return current * self.torque_constant + self.torque_resistance
+
+    def rads_to_RPM(self, rads):
+
+        return rads/self.RPM_to_radpersec
 
     def train(self):
 
         for model in self.models:
             train_error = model.train()
 
-            print("\nGP model: " + model.y_header)
-            print(model.get_hyperparameters())
+            print("\nModel output: " + model.y_header)
+            print("Model inputs: ")
+            print(model.x_headers)
             print("training error: " + str(train_error))
 
-    def predict(self, X):
+    def predict(self, X = {'DP (psi)':0.0, 'Speed (rad/s)':0.0, 'Flow Rate (GPM)':0.0, 'GV (deg)':0.0, 'torque (mNm)':0.0}, 
+                      prt_to_screen = False):
+        
+        model_x_head = []
+        model_y_head = []
+        model_x = []
+        
+        self.clear()
+        for var in self.variables:
+            if var in X.keys():
+                self.x[var] = X[var]
+                model_x_head.append(var)
+                model_x.append(X[var])
+            else:
+                model_y_head.append(var)
 
-        pred = np.empty([len(X), len(self.models)])
-        for i, model in enumerate(self.models):
-            model.predict(X)
-            pred[:,i] = model.y_pred[:,0]
+        for y in model_y_head:
+            self.y[y] = self.models_dict[tuple(model_x_head)][y].predict(model_x)[0][0][0]
 
-        for i, x in enumerate(X):
-            print("\ninputs: "+ '['+' '.join(str(j) for j in x) +']')
-            print("outputs: "+ '['+' '.join(str(j) for j in pred[i,:])+']')
+        if prt_to_screen:
+            print()
+            for var in self.variables:
+                if var in self.x.keys():
+                    print(var+": "+ str(self.x[var]))
+                else:
+                    print(var+": "+ str(self.y[var]))
+
+        return self.y
 
     def train_with_cross_validation(self):
 
@@ -317,11 +441,10 @@ class SS_model(object):
                 model.grid_search()
 
     def save_models(self):
-
+        ascii_lowercase = 'abcdefghijklmnopqrstuvwxyz'
         for i, model in enumerate(self.models):
-            if i == 1:
-                filename = "model_" + str(i) + ".sav"
-                pickle.dump(model, open(self.path + filename, 'wb'))
+            filename = "model_" + ascii_lowercase[i] + ".sav"
+            pickle.dump(model, open(self.path + filename, 'wb'))
 
     def load_models(self):
 
@@ -335,25 +458,56 @@ class SS_model(object):
             print(file_name)
         print()
 
+        for i, inp in enumerate(self.inputs):
+            self.models_dict[inp] = {}
+            for y, out in enumerate(self.outputs[i]):
+                self.models_dict[inp][out] = self.models[i*2 + y]
 
+    def plot_surface(self, x_headers = ['Flow Rate (GPM)', 'GV (deg)', 'torque (mNm)'], 
+                           y_headers = ['DP (psi)', 'Speed (rad/s)'],
+                           grid_x = 40, grid_y = 40, flow=25.0):
+
+        limits = self.data.get_limits(x_headers)
+
+        X = np.linspace(limits[0][0], limits[0][1], num = grid_x)
+        Y = np.linspace(limits[1][0], limits[1][1], num = grid_y)
+        X, Y = np.meshgrid(X, Y)
+
+        Z = []
+        for model in y_headers:
+            temp = np.zeros([grid_x, grid_y])
+            for x in range(grid_x):
+                for y in range(grid_y):
+                    temp[x,y] = self.models_dict[tuple(x_headers)][model].predict([X[x,y],Y[x,y],flow])[0][0][0]
+            Z.append(temp)
+
+        fig = plt.figure(figsize=(14,6), tight_layout=True)
+
+        for i, model in enumerate(y_headers):
+            ax = fig.add_subplot(1, 2, i + 1, projection='3d')
+            ax.plot_wireframe(X, Y, Z[i], cmap="YlGnBu_r")
+            ax.plot_surface(X, Y, Z[i], alpha=0.5, antialiased=True,cmap="YlGnBu_r")
+
+            ax.set_xlabel(x_headers[0], fontsize= 14, labelpad=10)
+            ax.set_ylabel(x_headers[1], fontsize= 14, labelpad=10)
+            ax.set_zlabel(model, fontsize= 14,  labelpad=5.5, rotation=300)
+
+        plt.autoscale()
+        plt.show()
 
 
 
 if __name__ == '__main__':
     
+    from Turbine_model import *
+
     file_path=r"C:\Users\lilly\OneDrive\Documents\1.0_Graduate_Studies\5.0 Energy havester\5.8_code\Energy_Harvester\Processed_data2"
 
     data = turbine_data(file_path)
 
-    #Steady State Model
-    output_var = ['GV (deg)', 'torque (mNm)']
-    input_var = ['DP (psi)', 'Speed (rad/s)', 'Flow Rate (GPM)' ]
-
-    steady_state_model = SS_model(input_var, output_var, data=None)
-    # steady_state_model.grid_search()
-    #steady_state_model.train()
-    # steady_state_model.train_with_cross_validation()
-    # steady_state_model.save_models()
-    steady_state_model.predict([[ 19.9, 567, 25.0],
-                                [ 19.2, 523, 25.0],
-                                [ 7.3, 412, 27.3]])
+    steady_state_model = SS_model(data = data, load_model = False)
+    steady_state_model.train()
+    steady_state_model.predict({'DP (psi)':19.9, 'Speed (rad/s)':567, 'Flow Rate (GPM)':25.0}, prt_to_screen = True)
+    steady_state_model.predict({'GV (deg)': 6.5, 'Flow Rate (GPM)': 25.82, 'torque (mNm)': 132.44342}, prt_to_screen = True)
+    steady_state_model.save_models()
+    steady_state_model.plot_surface()

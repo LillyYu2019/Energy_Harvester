@@ -36,6 +36,7 @@ class sensor_recorder(object):
 
         self.data_steady_state_ = []
         self.data_ = []
+        self.length = 0
         self.I_offset_ = 0.0
         self.V_offset_ = 0.0
         
@@ -93,16 +94,15 @@ class sensor_recorder(object):
             if self.identifier_[i] == "PT2":
                 self.data_[len(self.identifier_)].append(self.data_[1][-1]-self.data_[2][-1])
 
+            self.length += 1
+
         return True
 
     def length(self):
         '''
         Return the number of data point recorded
         '''
-
-        size = len(self.data_[0])
-
-        return size
+        return self.length
 
     def print_to_screen(self):
         '''
