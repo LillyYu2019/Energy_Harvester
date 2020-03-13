@@ -452,10 +452,15 @@ class SS_model(object):
         all_files = glob.glob(os.path.join(self.path, "*.sav")) #make list of paths
 
         print("\nloading models: ")
+        file_name = []
         for f in all_files:
-            file_name = os.path.splitext(os.path.basename(f))[0]  # Getting the file name without extension
-            self.models.append(pickle.load(open(self.path + file_name + ".sav", 'rb')))
-            print(file_name)
+            file_name.append(os.path.splitext(os.path.basename(f))[0])  # Getting the file name without extension
+
+        file_name.sort()
+
+        for f in file_name:
+            self.models.append(pickle.load(open(self.path + f + ".sav", 'rb')))
+            print(f)
         print()
 
         for i, inp in enumerate(self.inputs):
