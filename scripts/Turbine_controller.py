@@ -180,10 +180,8 @@ class controller_main(object):
             s = ""
 
         if s == 'c':
-            #controller.step()
-            self.diff['GV (deg)'] = 1
-            self.step_GV()
-            self.ser.write(self.commend).encode("utf-8")
+            controller.step()
+            self.ser.write(self.commend.encode())   
 
         return True
 
