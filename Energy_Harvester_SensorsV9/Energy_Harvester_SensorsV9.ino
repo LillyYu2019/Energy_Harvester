@@ -31,7 +31,7 @@
 //Global settings
 const bool print_sample_time = false;
 const int total_num_sensors = 8;
-const String sensor_names[] = {"PT1", "PT2", "tor", "V", "I", "RPM", "GPM", "GV"};
+const String sensor_names[] = {"PT1", "PT2", "Tm", "V", "I", "w", "q", "g"};
 const float target_sample_time = 200.0; //ms
 const int decimal_places = 4;
 

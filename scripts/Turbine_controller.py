@@ -1,72 +1,50 @@
-from datetime import datetime
+from serial import Serial
 
 class feed_forward(object):
 
-    def __init__(self, SS_model):
-
-        super().__init__()
+    def __init__(self, SS_model, param):
 
         self.SS_model = SS_model
+        self.param = param
 
-    def predict(self, x_desired):
+    def step(self, x_ref, x_current):
 
-        if 'I (A)' in x_desired.keys():
-            x_desired['torque (mNm)'] = self.SS_model.current_to_torque(x_desired['I (A)'])
-
-        if 'Speed (rpm)' in x_desired.keys():
-            x_desired['Speed (rad/s)'] = self.SS_model.RPM_to_rads(x_desired['Speed (rpm)'])
-
-        commend = self.SS_model.predict(x_desired)
-
-        if 'torque (mNm)' in commend.keys():
-            commend['I (A)'] = self.SS_model.torque_to_current(commend['torque (mNm)'])
-
-        if 'Speed (rad/s)' in commend.keys():
-            commend['Speed (rpm)'] = self.SS_model.rads_to_RPM(commend['Speed (rad/s)'])
-
+        inp = {
+            'DP (psi)': x_ref['DP_ref'],
+            'Speed (RPM)': x_ref['w_ref'],
+            'Flow Rate (GPM)': x_current['q']
+        }
+        out = self.SS_model.predict(inp)
+        commend = {
+            'g': out['GV (deg)'], 
+            'I': (out['torque (mNm)'] - self.param['torque_resistance']) / self.param['torque_constant']
+        }
+        
         return commend
 
 class controller_main(object):
 
-    def __init__(self, ser, SS_model, input_var, output_var):
+    def __init__(self, mode, output_port, SS_model, param):
 
-        self.ser = ser
-        self.input_var = input_var
-        self.output_var = output_var
-
-        self.ff_controller = feed_forward(SS_model)
-
-        self.x_desired = {'DP (psi)':11.3, 'Speed (rpm)':4267, 'Flow Rate (GPM)':25.0}
-        self.x_current = {'DP (psi)':18.76, 'Speed (rpm)':4549, 'Flow Rate (GPM)':25.0}
-        self.y_desired = {}
-        self.y_current = {'GV (deg)':8.5, 'I (A)':3.4}
-        self.diff = {}
-        self.commend = ""
-
-        #flags
-        self.new_commend_computed = False
-        self.reading_data = True
+        self.mode = mode
+        self.SS_model = SS_model
+        if mode == "live":
+            self.ser = Serial(output_port, 9600)
 
         #constants
-        self.out_min = {'GV (deg)': 0.0, 'I (A)': 0.8}
-        self.out_max = {'GV (deg)': 8.5, 'I (A)': 3.6}
-        self.step_up = {'GV (deg)': 1, 'I (A)': 0.4}
-        self.step_down = {'GV (deg)': -1, 'I (A)': -0.4}
-        self.max_speed = 5000 #RPM
+        self.param = param
+        self.out_min = {'g': 0.0, 'I': 0.8}
+        self.out_max = {'g': 8.5, 'I': 3.6}
+        self.step_up = {'g': 1, 'I': 0.1}
+        self.step_down = {'g': -1, 'I': -0.1}
+        self.min_step = {'g': 0.1, 'I': 0.05}
+        self.max_speed = 6000 #RPM
+        self.min_speed = 2000 #RPM
 
-        self.current_time = datetime.now()
-        self.previous_time = self.current_time
+        #init all controllers
+        self.ff_controller = feed_forward(SS_model, param)
 
-    def add(self, dict1, dict2):
-
-        new_dict ={}
-
-        for v in dict1.keys():
-            if v in dict2.keys():
-                new_dict[v] = dict1[v] + dict2[v]
-
-        return new_dict
-
+    
     def sub(self, dict1, dict2):
 
         new_dict ={}
@@ -77,124 +55,73 @@ class controller_main(object):
 
         return new_dict
 
-    def saturate(self, out, out_min, out_max):
+    def saturate(self, out, lower, upper):
 
-        for y in self.output_var:
-            if out[y] < out_min[y]:
-                out[y] = out_min[y]
-            if out[y] > out_max[y]:
-                out[y] = out_max[y]
+        for y in out.keys():
+            if out[y] < lower[y]:
+                out[y] = lower[y]
+            if out[y] > upper[y]:
+                out[y] = upper[y]
         
         return out
 
-    def update_current_state(self, sensor_data):
+    def check_constrains(self, x_next):
 
-        if sensor_data == False:
-            return 
+        pass_constrain = True
 
-        self.x_current = {}
-        self.y_current = {}
+        out = self.SS_model.predict(x_next)
 
-        for var in self.input_var:
-            self.x_current[var] = sensor_data[var]
+        if out['Speed (RPM)'] > self.max_speed or out['Speed (RPM)'] < self.min_speed:
+            pass_constrain = False
+
+        return pass_constrain
+
+    def compute_commend(self, x_ref, x_current):
         
-        for var in self.output_var:
-            self.y_current[var] = sensor_data[var]
+        #compute controller desired commend and saturate output
+        h_des = self.ff_controller.step(x_ref, x_current)
+        h_des = self.saturate(h_des, self.out_min, self.out_max)
 
-        self.reading_data = True
+        #compute differential commend and saturate output
+        h_des_diff = self.sub(h_des, x_current)
+        h_des_diff = self.saturate(h_des_diff, self.step_down, self.step_up)
 
-    def get_commend(self):
+        #decide which order to step 
+        #check step I first
+        if abs(h_des_diff['I']) > self.min_step['I']:
+            x_next = {
+                'GV (deg)': x_current['g'],
+                'torque (mNm)': self.param['torque_constant']*(x_current['I'] + h_des_diff['I'])+ self.param['torque_resistance'],
+                'Flow Rate (GPM)': x_current['q']
+            }
+            if self.check_constrains(x_next):
+                return {'I_des': x_current['I'] + h_des_diff['I']}
 
-        self.y_desired = self.saturate(self.ff_controller.predict(self.x_desired), self.out_min, self.out_max)
-        self.new_commend_computed = True
+        #Check step g second
+        if abs(h_des_diff['g']) > self.min_step['g']:
+            x_next = {
+                'GV (deg)': x_current['g']+ h_des_diff['g'],
+                'torque (mNm)': self.param['torque_constant']*x_current['I']+ self.param['torque_resistance'],
+                'Flow Rate (GPM)': x_current['q']
+            }
+            if self.check_constrains(x_next):
+                return {'g_des': x_current['g'] + h_des_diff['g']}
 
-    def step_I(self):
-        #sends a bunch of commends to arduino
-        print("output step I: " + str(self.diff['I (A)']))
-        self.commend = "C\n"+ str(round(self.diff['I (A)'],3))
-        return
+        return {}
 
-    def step_GV(self):
-        #sends a bunch of commends to arduino
-        print("output step GV: " + str(self.diff['GV (deg)']))
-        self.commend = "G\n"+ str(round(self.diff['GV (deg)'],3))
-        return
-
-    def predict_x_next(self, var=[]):
-
-        new_diff = self.diff.copy()
-        for v in new_diff.keys():
-            if var and v not in var:
-                new_diff[v] = 0.0
-
-        pred = {'GV (deg)': self.y_current['GV (deg)'] + new_diff['GV (deg)'], 
-                                             'I (A)': self.y_current['I (A)'] + new_diff['I (A)'],
-                                             'Flow Rate (GPM)': self.x_current['Flow Rate (GPM)']}
-
-        x_next = self.ff_controller.predict(pred)
-        return x_next
-
-    def step(self):
-
-        if not self.reading_data:
-            return
-
-        controller.get_commend()
-
-        self.diff = self.sub(self.y_desired, self.y_current)
-        self.diff = self.saturate(self.diff, self.step_down, self.step_up)
-
-        can_step_I = False
-        can_step_GV = False
-
-        if self.predict_x_next()['Speed (rpm)'] >= self.max_speed:
-            print("Desired x not possible, max speed exceeded")
-            return False
+    def step(self, x_ref, x_current):
         
-        if abs(self.diff['I (A)']) > 0.1 and self.predict_x_next(var=['I (A)'])['Speed (rpm)'] < self.max_speed:
-            can_step_I = True
+        if 'DP_ref' not in x_ref.keys() or 'w_ref' not in x_ref.keys():
+            return {}
 
-        if abs(self.diff['GV (deg)']) > 0.2 and self.predict_x_next(var=['GV (deg)'])['Speed (rpm)'] < self.max_speed:
-            can_step_GV = True
+        h_des = self.compute_commend(x_ref, x_current)
 
-        if can_step_I:
-            self.step_I()
-            return True
+        if self.mode == "live":
+            if "I_des" in h_des.keys():
+                commend = "C\n"+ str(round(h_des['I_des'],3))
+                self.ser.write(commend.encode()) 
+            elif "g_des" in h_des.keys():
+                commend = "G\n"+ str(round(h_des['g_des'],3))
+                self.ser.write(commend.encode()) 
 
-        if can_step_GV:
-            self.step_GV()
-            return True
-
-        return False
-
-    def run(self, max_iteration = 10):
-
-        for i in range(max_iteration):
-            controller.step()
-
-    def user_input(self, key):
-
-        try:
-            s = key.char
-        except:
-            s = ""
-
-        if s == 'c':
-            controller.step()
-            self.ser.write(self.commend.encode())   
-
-        return True
-
-
-if __name__ == '__main__':
-
-    import Turbine_model
-
-    #controller
-    output_var_con = ['GV (deg)', 'I (A)']
-    input_var_con = ['DP (psi)', 'Speed (RPM)', 'Flow Rate (GPM)' ]
-
-    steady_state_model = Turbine_model.SS_model(load_model = True)
-    controller = controller_main(steady_state_model, input_var_con, output_var_con)
-    controller.run()
-    
+        return h_des

@@ -60,7 +60,7 @@ class SS_model_base(object):
 
     def predict(self, X):
 
-        if isinstance(X[0], float):
+        if not isinstance(X[0], list):
             X = [X]
 
         self.X_pred = X
@@ -241,7 +241,7 @@ class SS_model(object):
         self.data = data
         self.path = "SS_models/"
 
-        self.variables = ['DP (psi)', 'Speed (rad/s)', 'Flow Rate (GPM)', 'GV (deg)', 'torque (mNm)']
+        self.variables = ['DP (psi)', 'Speed (RPM)', 'Flow Rate (GPM)', 'GV (deg)', 'torque (mNm)']
         self.inputs = list(itertools.combinations(self.variables,3))
         self.outputs = list(itertools.combinations(self.variables,2))[::-1]
 
@@ -249,9 +249,6 @@ class SS_model(object):
             self.load_models()
         else:
             self.init()
-
-        #model constants:
-        self.RPM_to_radpersec = 0.104719755
 
         #current state:
         self.x = {}
@@ -286,7 +283,7 @@ class SS_model(object):
             print(model.x_headers)
             print("training error: " + str(train_error))
 
-    def predict(self, X = {'DP (psi)':0.0, 'Speed (rad/s)':0.0, 'Flow Rate (GPM)':0.0, 'GV (deg)':0.0, 'torque (mNm)':0.0}, 
+    def predict(self, X = {'DP (psi)':0.0, 'Speed (RPM)':0.0, 'Flow Rate (GPM)':0.0, 'GV (deg)':0.0, 'torque (mNm)':0.0}, 
                       prt_to_screen = False):
         
         model_x_head = []
@@ -360,7 +357,7 @@ class SS_model(object):
                 self.models_dict[inp][out] = self.models[i*2 + y]
 
     def plot_surface(self, x_headers = ['Flow Rate (GPM)', 'GV (deg)', 'torque (mNm)'], 
-                           y_headers = ['DP (psi)', 'Speed (rad/s)'],
+                           y_headers = ['DP (psi)', 'Speed (RPM)'],
                            grid_x = 40, grid_y = 40, flow=25.0):
 
         limits = self.data.get_limits(x_headers)

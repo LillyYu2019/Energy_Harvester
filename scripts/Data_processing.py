@@ -19,12 +19,12 @@ class turbine_data(object):
         self.limits = []
 
         #steady state data
-        self.steady_state_headers = ['Speed (rad/s)','GV (deg)','Flow Rate (GPM)','DP (psi)','torque (mNm)','turbine eff']
+        self.steady_state_headers = ['Speed (RPM)','GV (deg)','Flow Rate (GPM)','DP (psi)','torque (mNm)','turbine eff']
         self.steady_state_np = []
         self.steady_state_len = 0
 
         #transient data
-        self.transient_headers = ['Time (sec)', 'GV (deg)', 'I (A)', 'Speed (rad/s)', 'Flow Rate (GPM)', 'DP (psi)','torque (mNm)', 'V (V)' ]
+        self.transient_headers = ['Time (sec)', 'GV (deg)', 'I (A)', 'Speed (RPM)', 'Flow Rate (GPM)', 'DP (psi)','torque (mNm)', 'V (V)' ]
         self.transient_list_np = []
         self.transient_list_len = []
 
@@ -97,13 +97,13 @@ if __name__ == '__main__':
     
     from Turbine_SS_model import *
 
-    file_path=r"C:\Users\lilly\OneDrive\Documents\1.0_Graduate_Studies\5.0 Energy havester\5.8_code\Energy_Harvester\Processed_data2"
+    file_path="/home/lilly/Energy_Harvester/Processed_data2"
 
     data = turbine_data(file_path)
 
     steady_state_model = SS_model(data = data, load_model = False)
     steady_state_model.train()
-    steady_state_model.predict({'DP (psi)':19.9, 'Speed (rad/s)':567, 'Flow Rate (GPM)':25.0}, prt_to_screen = True)
-    steady_state_model.predict({'GV (deg)': 6.5, 'Flow Rate (GPM)': 25.82, 'torque (mNm)': 132.44342}, prt_to_screen = True)
+    steady_state_model.predict({'DP (psi)':19.9, 'Speed (RPM)':5419, 'Flow Rate (GPM)':25.0}, prt_to_screen = True)
+    steady_state_model.predict({'GV (deg)': 6.5, 'Flow Rate (GPM)': 25.87, 'torque (mNm)': 105}, prt_to_screen = True)
     steady_state_model.save_models()
     steady_state_model.plot_surface()
