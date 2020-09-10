@@ -1,3 +1,5 @@
+
+
 /*
  Energy Harvester Stepper motor control
  Justin and Lilly
@@ -17,12 +19,13 @@
  
 #include <Stepper.h>
 #include <SPI.h>
+#include <Encoder.h>
 #include "DAC_MCP49xx.h"
 
-#define in1Pin 6
-#define in2Pin 5
-#define in3Pin 4
-#define in4Pin 3
+#define in1Pin 7
+#define in2Pin 6
+#define in3Pin 5
+#define in4Pin 4
 #define SS_PIN 10
 
 //Initialize stepper motor
@@ -32,6 +35,10 @@ float motor_speed = 50.0;
 float sensor_read_time = 0.0; // in seconds
 float start_time = 0.0;
 float curr = 0.0;
+
+Encoder gv_angle(3,2);
+float g = 0.0;
+float encoder_k = -1.0 / 4.0 / 600.0 * 200.0 * 1.8 / 99.5075 * 30.0 / 114.0;// 4x readings, motors has 200 ticks, encoder has 600 ticks
 
 DAC_MCP49xx dac(DAC_MCP49xx::MCP4921, SS_PIN);
 
@@ -134,6 +141,12 @@ void read_input_commends_with_prompt()
         {
           curr = 0.0;
           dac.output(0);
+        }
+        else if (c == 'g')
+        {
+          g = gv_angle.read() * encoder_k;
+          Serial.print("GV angle: ");
+          Serial.println(g, 2);
         }
         else if (c != '\n')
         {

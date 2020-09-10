@@ -31,18 +31,18 @@
 //Global settings
 const bool print_sample_time = false;
 const int total_num_sensors = 8;
-const String sensor_names[] = {"PT1", "PT2", "Tm", "V", "I", "w", "q", "g"};
-const float target_sample_time = 200.0; //ms
+const String sensor_names[] = {"PT1", "PT2", "V", "I", "w", "q", "g"};
+const float target_sample_time = 100.0; //ms
 const int decimal_places = 4;
+float dt = 0;
 
 //Analog sensor settings
-const int num_analog_sensors = 5;
-const int analog_target_samples = 120;
-const int analog_pins[num_analog_sensors] = {A0, A1, A13, A14, A15};
+const int num_analog_sensors = 4;
+const int analog_target_samples = 200;
+const int analog_pins[num_analog_sensors] = {A0, A1, A6, A4};
 float analog_range[num_analog_sensors][4] = {
     {5, 1, 100, 0},      //psi
     {5, 1, 100, 0},      //psi
-    {5, 0, 2000, 7.885}, //mNm
     {5, 0, 30, 0.0},     //V
     {5, 0, 60, 0.0},    //A
 };
@@ -51,12 +51,12 @@ float analog_range[num_analog_sensors][4] = {
 const int num_digital_sensors = 2;
 const float digital_time_out_limit = 1000; //ms
 const int digital_pins[num_digital_sensors] = {2, 3};
-const int digital_target_samples[num_digital_sensors] = {20, 40};
+const int digital_target_samples[num_digital_sensors] = {30, 60};
 const float digital_k[num_digital_sensors] = {1.0 / 2.0 * 60.0, 1.0 / 2.0 / 246.7 * 60.0};
 
 //Encoder settings
 const int num_encoders = 1;
-const int encoder_pins[num_encoders][2] = {{18, 19}};
+const int encoder_pins[num_encoders][2] = {{19, 18}};
 const float encoder_k[num_encoders] = {-1.0 / 4.0 / 600.0 * 200.0 * 1.8 / 99.5075 * 30.0 / 114.0}; // 4x readings, motors has 200 ticks, encoder has 600 ticks
 
 //Global Variables
@@ -79,15 +79,19 @@ void loop()
 {
   analog_read();
   digital_read();
+  
+  analog_write();
+  digital_write();
+  encoder_write();
 
-  if (millis() - start_time > target_sample_time)
+  dt= millis() - start_time;
+  if (dt > target_sample_time)
   {
-    analog_write();
-    digital_write();
-    encoder_write();
-    print_to_serial();
+    print_to_serial(dt);
     start_time = millis();
   }
+  
+
 }
 
 void initialize_all_sensors()
@@ -155,20 +159,20 @@ void incrementEdge1()
 {
   Tachometer_list[0].increment_edge();
 }
-
+ 
 void incrementEdge2()
 {
   Tachometer_list[1].increment_edge();
 }
 
-void print_to_serial()
+void print_to_serial(float sample_time)
 {
-  Serial.print("t ");
-  Serial.println(millis() / 1000.0, decimal_places);
   for (byte i = 0; i < total_num_sensors; i++)
   {
     Serial.print(sensor_names[i] + " ");
     Serial.println(sensor_readings[i], decimal_places);
+    Serial.print("dt ");
+    Serial.println(sample_time/1000.0, decimal_places);
   }
   if (print_sample_time == true)
     {

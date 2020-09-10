@@ -52,13 +52,13 @@ float Analog_sensor::get_sample_time()
 }
 
 void Analog_sensor::read()
-{
-    voltage_ += analogRead(pin_);
-    read_count_ += 1;
-
-    if (read_count_ > target_sample_count_)
+{   
+    for (int i = 0; i<target_sample_count_;i++)
     {
-        map();
-        clear();
+      voltage_ += analogRead(pin_);
+      read_count_ += 1;
     }
+
+    map();
+    clear();
 }

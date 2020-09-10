@@ -1,4 +1,3 @@
-
 import glob
 import os
 
@@ -40,9 +39,9 @@ class SS_model_base(object):
     def set_xy_data(self, data):
 
         for i, head in enumerate(self.x_headers):
-            self.X[:, i] = data.steady_state_np[:,data.steady_state_headers.index(head)]
+            self.X[:, i] = data.steady_state_np[:,data.steady_state_col.index(head)]
 
-        self.y[:,0] = data.steady_state_np[:,data.steady_state_headers.index(self.y_header)]
+        self.y[:,0] = data.steady_state_np[:,data.steady_state_col.index(self.y_header)]
 
     def get_train_error(self):
 
@@ -233,17 +232,21 @@ class SS_model_QP(SS_model_base):
 
 class SS_model(object):
 
-    def __init__(self, data = None, load_model = True, model = 'KRG'):
+    def __init__(self, data = None, load_model = True, model = 'KRG', folder_name = "SS_models/", setting = 'old'):
 
         self.models = []
         self.models_dict = {}
         self.model_type = model
         self.data = data
-        self.path = "SS_models/"
+        self.path = folder_name
 
-        self.variables = ['DP (psi)', 'Speed (RPM)', 'Flow Rate (GPM)', 'GV (deg)', 'torque (mNm)']
-        self.inputs = list(itertools.combinations(self.variables,3))
-        self.outputs = list(itertools.combinations(self.variables,2))[::-1]
+        self.variables = ['DP', 'w', 'q', 'g', 'Tm']
+        if setting == 'old':
+            self.inputs = list(itertools.combinations(self.variables,3)) #[('w','q','g'), ('DP','q', 'Tm'),('DP', 'w','q')]
+            self.outputs = list(itertools.combinations(self.variables,2))[::-1] #[('DP', 'Tm'), ('w','g'),('g', 'Tm')]
+        else:
+            self.inputs = [('w','q','g'), ('DP','q', 'Tm'),('DP', 'w','q')]
+            self.outputs = [('DP', 'Tm'), ('w','g'),('g', 'Tm')]
 
         if load_model:
             self.load_models()
@@ -283,7 +286,7 @@ class SS_model(object):
             print(model.x_headers)
             print("training error: " + str(train_error))
 
-    def predict(self, X = {'DP (psi)':0.0, 'Speed (RPM)':0.0, 'Flow Rate (GPM)':0.0, 'GV (deg)':0.0, 'torque (mNm)':0.0}, 
+    def predict(self, X = {'DP':0.0, 'w':0.0, 'q':0.0, 'g':0.0, 'Tm':0.0}, 
                       prt_to_screen = False):
         
         model_x_head = []
@@ -356,23 +359,25 @@ class SS_model(object):
             for y, out in enumerate(self.outputs[i]):
                 self.models_dict[inp][out] = self.models[i*2 + y]
 
-    def plot_surface(self, x_headers = ['Flow Rate (GPM)', 'GV (deg)', 'torque (mNm)'], 
-                           y_headers = ['DP (psi)', 'Speed (RPM)'],
-                           grid_x = 40, grid_y = 40, flow=25.0):
+    def plot_surface(self, x_headers = ['w', 'g', 'q'], 
+                           y_headers = ['DP', 'Tm'],
+                           grid_x = 40, grid_y = 40, flow=26):
 
         limits = self.data.get_limits(x_headers)
 
-        X = np.linspace(limits[0][0], limits[0][1], num = grid_x)
+        X = np.linspace(limits[0][0], 5500, num = grid_x)
         Y = np.linspace(limits[1][0], limits[1][1], num = grid_y)
         X, Y = np.meshgrid(X, Y)
 
-        Z = []
-        for model in y_headers:
-            temp = np.zeros([grid_x, grid_y])
-            for x in range(grid_x):
-                for y in range(grid_y):
-                    temp[x,y] = self.models_dict[tuple(x_headers)][model].predict([X[x,y],Y[x,y],flow])[0][0][0]
-            Z.append(temp)
+        temp = np.zeros([grid_x, grid_y])
+        temp2 = np.zeros([grid_x, grid_y])
+        for x in range(grid_x):
+            for y in range(grid_y):
+                pre = self.predict(X = {'w':X[x,y], 'g':Y[x,y], 'q':flow})
+                Y[x,y] = Y[x,y] * 2.13645 + 0.01* Y[x,y]**2
+                temp[x,y] = pre['DP']
+                temp2[x,y] = pre['Tm']
+        Z = [temp, temp2]
 
         fig = plt.figure(figsize=(14,6), tight_layout=True)
 
@@ -387,5 +392,163 @@ class SS_model(object):
 
         plt.autoscale()
         plt.show()
+    
+    def plot_efficiency(self, x_headers = ['w', 'g', 'q'], 
+                           y_headers = ['DP', 'Tm'],
+                           grid_x = 40, grid_y = 40, flow=27):
 
+        limits = self.data.get_limits(x_headers)
 
+        X = np.linspace(2300, 4800, num = grid_x)
+        Y = np.linspace(limits[1][0], limits[1][1], num = grid_y)
+        X, Y = np.meshgrid(X, Y)
+
+        temp = np.zeros([grid_x, grid_y])
+        temp2 = np.zeros([grid_x, grid_y])
+        temp3 = np.zeros([grid_x, grid_y])
+        for x in range(grid_x):
+            for y in range(grid_y):
+                w = X[x,y]
+                g = Y[x,y]
+                DP = 14
+                pre = self.predict(X = {'w':w, 'g':g, 'q':flow})
+
+                I = (pre['Tm'] - 10.506) / 46.541
+                if I < 0:
+                    I = 0
+                V = w / 213 - 1.67 * I - 1.3
+                if V < 0:
+                    V = 0
+                P_e = V*I
+                P_t = pre['Tm'] * w * 0.104719755 / 1000.0
+                P_f =  flow / 15850.323114 * (pre['DP']- 0.491) * 6894.76
+
+                Y[x,y] = Y[x,y] * 2.13645 + 0.01* Y[x,y]**2
+                
+                temp[x,y] = P_t/P_f
+                temp2[x,y] = P_e/P_t
+                temp3[x,y] = P_e/P_f
+
+                if temp[x,y] < 0 or temp[x,y] > 1: 
+                    print(1)
+                    print({'w':w, 'g':g, 'q':flow})
+                    print(pre['Tm'])
+                    print(w)
+                if temp2[x,y] < 0 or temp2[x,y] > 1:
+                    print(2)
+                    print({'w':w, 'g':g, 'q':flow})
+                    print(temp2[x,y])
+                if temp3[x,y] < 0 or temp3[x,y] > 1:
+                    print(3)
+                    print({'w':w, 'g':g, 'q':flow})
+                    print(temp3[x,y])
+
+        Z = [temp, temp2, temp3]
+
+        fig = plt.figure(figsize=(21,6), tight_layout=True)
+
+        title = ['eff_t', ' eff_g', 'eff']
+        for i, model in enumerate(title):
+            ax = fig.add_subplot(1, 3, i + 1, projection='3d')
+            ax.plot_wireframe(X, Y, Z[i], cmap="YlGnBu_r")
+            ax.plot_surface(X, Y, Z[i], alpha=0.5, antialiased=True,cmap="YlGnBu_r")
+
+            ax.set_xlabel(x_headers[0], fontsize= 14, labelpad=10)
+            ax.set_ylabel(x_headers[1], fontsize= 14, labelpad=10)
+            ax.view_init(elev=25., azim=-135)
+
+        plt.autoscale()
+        plt.show()
+
+if __name__ == '__main__':
+    
+    from Turbine_SS_model import *
+
+    ss_models = []
+    ss_models.append(SS_model(load_model = True,  folder_name = "SS_models/"))
+    ss_models.append(SS_model(load_model = True,  folder_name = "SS_models_0818/"))
+    ss_models.append(SS_model(load_model = True,  folder_name = "SS_model_gap4/"))
+    # ss_models.append(SS_model(load_model = True,  folder_name = "SS_model_gap6/"))
+
+    names = ['Identified', 'Experimental', 'CFD 4% Gap']
+    opacity = [0.3, 0.3, 0.3, 0.3]
+    colors = ["Blues", "Reds", "YlOrBr", "OrRd"]
+    c = ['skyblue', 'lightcoral', 'lightgreen']
+    c2 = [
+        'steelblue',
+        'indianred',
+        'burlywood'
+    ]
+    offset = [0, 0, 0, 0]
+    x_headers = ['w', 'g', 'q']
+    y_headers = ['DP']
+    grid_x = 20
+    grid_y = 20
+    flow=25.5
+
+    X = np.linspace(1500, 5500, num = grid_x)
+    Y = np.linspace(0, 8.5, num = grid_y)
+    X, Y = np.meshgrid(X, Y)
+
+    Z = []
+
+    for i, model in enumerate(ss_models):
+        temp = np.zeros([grid_x, grid_y])
+        for x in range(grid_x):
+            for y in range(grid_y):
+                pre = model.predict(X = {'w':X[x,y], 'g':Y[x,y], 'q':flow})
+                temp[x,y] = (pre[y_headers[0]] + offset[i])*6.89476
+        Z.append(temp.copy())
+                
+    for x in range(grid_x):
+        for y in range(grid_y):           
+            Y[x,y] = Y[x,y] * 2.13645 + 0.01* Y[x,y]**2
+            X[x,y] = X[x,y]*0.104719755
+
+    fig = plt.figure(figsize=(14,6), tight_layout=True)
+    ax = fig.add_subplot(1, 2, 1, projection='3d')
+
+    for i, model in enumerate(ss_models):
+        ax.plot_wireframe(X, Y, Z[i],alpha=0.5, color = c2[i], label=names[i])
+        ax.plot_surface(X, Y, Z[i], alpha=opacity[i], antialiased=True, cmap = colors[i])
+
+    ax.set_xlabel('Angular speed $\omega$ (rad/s)', fontsize= 14, labelpad=10)
+    ax.set_ylabel('GV angle $g$ (deg)', fontsize= 14, labelpad=10)
+    ax.set_zlabel('Pressure $h$ (kPa)', fontsize= 14,  labelpad=5.5, rotation=300)
+    ax.legend()
+
+    ax2 = fig.add_subplot(1, 2, 2, projection='3d')
+
+    y_headers = ['Tm']
+    offset = [0, 0, 0, 0]
+    X = np.linspace(1500, 5500, num = grid_x)
+    Y = np.linspace(0, 8.5, num = grid_y)
+    X, Y = np.meshgrid(X, Y)
+
+    Z = []
+
+    for i, model in enumerate(ss_models):
+        temp = np.zeros([grid_x, grid_y])
+        for x in range(grid_x):
+            for y in range(grid_y):
+                pre = model.predict(X = {'w':X[x,y], 'g':Y[x,y], 'q':flow})
+                temp[x,y] = pre[y_headers[0]] + offset[i]
+        Z.append(temp.copy())
+                
+    for x in range(grid_x):
+        for y in range(grid_y):           
+            Y[x,y] = Y[x,y] * 2.13645 + 0.01* Y[x,y]**2
+            X[x,y] = X[x,y]*0.104719755
+
+    for i, model in enumerate(ss_models):
+        ax2.plot_wireframe(X, Y, Z[i],alpha=0.5, color = c2[i], label=names[i])
+        ax2.plot_surface(X, Y, Z[i], alpha=opacity[i], antialiased=True, cmap = colors[i])
+
+    ax2.set_xlabel('Angular speed $\omega$ (rad/s)', fontsize= 14, labelpad=10)
+    ax2.set_ylabel('GV angle $g$ (deg)', fontsize= 14, labelpad=10)
+    ax2.set_zlabel('Torque $m_t$ (mNm)', fontsize= 14,  labelpad=5.5, rotation=300)
+    ax2.legend()
+
+    plt.autoscale()
+    plt.show()
+    
