@@ -1,0 +1,353 @@
+r - set reference
+i - set control input
+o - turn controller on /off
+p - pause
+d- take ss data
+s - save data
+k - kill turbine
+
+arduino - 0.15
+measured - 12
+pump: 39.7
+
+1st point:
+pt2: 35.12, w: 3400
+
+2nd point
+pt2:34.57, w: 3000
+
+PID only settings
+08_12_PID2_sim
+08_12_PID_live
+
+        self.PT2_schedule = [
+            [30, 35.12, 3400],
+             [400, 34.57, 3500],
+             [700, 35.12, 3200],
+        ]
+	t=1
+	self.Kp = np.array([
+            [0.01, 0],
+            [0, -0.0001]
+        ])
+        self.Ki = np.array([
+            [0.1, 0],
+            [0, -0.0001]
+        ])
+        self.e = np.zeros((2,1))
+        self.sum_e = np.zeros((2,1))
+        self.sum_e_sat = np.array([
+            [86],
+            [30000]
+        ])
+
+	self.ukf.R = np.diag([0.0672, #Pressure transducer (DP) noise 0.0672
+		              0.0187])    #Voltage noise 0.00187
+	self.ukf.Q = np.diag([0.15**2,     #Pressure disturbance
+		              0.2**2])    #Torque disturbance
+
+
+PID and FF settings
+08_12_PID2_live
+08_12_PIDff_live (only managed to do half, old ff controller)
+08_12_PIDff2_live (changed to static ff controller)
+note: stop adding to PI error when controller is saturated
+note2: used w_pred for control, but going to use w from now on for safety reasons
+
+        self.PT2_schedule = [
+            [30, 35.12, 3400],
+             [400, 34.57, 3500],
+             [700, 35.12, 3200],
+        ]
+
+	t=1
+	self.Kp = np.array([
+            [0.01, 0],
+            [0, -0.0001]
+        ])
+        self.Ki = np.array([
+            [0.2, 0],
+            [0, -0.0001]
+        ])
+        self.e = np.zeros((2,1))
+        self.sum_e = np.zeros((2,1))
+        self.sum_e_sat = np.array([
+            [86],
+            [30000]
+        ])
+
+	self.ukf.R = np.diag([0.0672, #Pressure transducer (DP) noise 0.0672
+		              0.0187])    #Voltage noise 0.00187
+	self.ukf.Q = np.diag([0.15**2,     #Pressure disturbance
+
+
+PID bettertunning:
+08_13_sim_PID
+08_13_sim_PIDff
+note:changed PT2 equation to the fully open one
+	
+        self.PT2_schedule = [
+            [30, 35.12, 3400],
+             [300, 34.57, 3500],
+             [500, 35.12, 3200],
+        ]
+
+        self.Kp = np.array([
+            [0.02, 0],
+            [0, 0.00005]
+        ])
+        self.Ki = np.array([
+            [0.3, 0],
+            [0, 0.0001]
+        ])
+
+08_13_sim_PID2 (upstream disturbances)
+        self.PT2_schedule = [
+            [30, 35.12, 3400],
+        ]
+
+        self.q_schedule = [
+            [0, 1],
+            [60, 0],
+            [70, 1],
+            [80, 2],
+            [90, 0],
+            [100, 2],
+            [110, 1],
+
+        ]
+
+08_13_live_PID (poor speed control, going to try to tune it)
+-upstream disturbance at 600s
+-downstream disturbance at 800s
+
+
+08_13_sim_PID3
+08_13_live_PID2
+-added alternative state in low low level control
+-changed I PI gains to be more agressive
+-changed I speed to 0.2A/s
+-changed observer to 0.5s or 2Hz
+	
+        self.PT2_schedule = [
+            [30, 35.12, 3400],
+             [200, 34.0, 3700],
+             [400, 35.12, 3200],
+        ]
+
+        self.Kp = np.array([
+            [0.02, 0],
+            [0, 0.0003]
+        ])
+        self.Ki = np.array([
+            [0.3, 0],
+            [0, 0.0003]
+        ])
+
+08_13_live_PID3
+-the previous G gains were too agressive at high angle, even though it has good disturbance rejection,
+it's not good for set point change, a ff model will help with it
+-hoeever, one can argue that set point changes are not needed often or that different gains can be
+used if a set point change is admitted.
+-controller loop rate 1Hz -> 2Hz
+        self.PT2_schedule = [
+            [30, 35.12, 3400],
+             [200, 34.0, 3700],
+             [400, 35.12, 3200],
+        ]
+	        self.Kp = np.array([
+            [0.01, 0],
+            [0, 0.0003]
+        ])
+        self.Ki = np.array([
+            [0.15, 0],
+            [0, 0.0003]
+        ])
+
+08_13_live_PIDff1
+-changing set point worked really well, but disturbance changes were bad
+
+        self.Kp = np.array([
+            [0.03, 0],
+            [0, 0.0003]
+        ])
+        self.Ki = np.array([
+            [0.3, 0],
+            [0, 0.0003]
+
+08_13_live_PIDff2_dis
+-disturbance changes only
+        self.PT2_schedule = [
+            [30, 35.12, 3400],
+        ]
+        self.Kp = np.array([
+            [0.03, 0],
+            [0, 0.0003]
+        ])
+        self.Ki = np.array([
+            [0.3, 0],
+            [0, 0.0003]
+        ])
+
+08_13_live_ff
+-original model not model 0809
+
+08_13_live_PIDff2
+-replaced with original model, not model0809
+
+08_18_sim
+-model (changed DP to PT1_measured - PT2_measured)
+-ff and pid
+-ss_model: SS_models_0818
+        self.Kp = np.array([
+            [0.01, 0],
+            [0, 0.0003]
+        ])
+        self.Ki = np.array([
+            [0.3, 0],
+            [0, 0.0003]
+        ])
+
+08_18_sim_noff
+-model (changed DP to PT1_measured - PT2_ref)
+-pid
+-ss_model: SS_models_0818
+        self.Kp = np.array([
+            [0.01, 0],
+            [0, 0.0003]
+        ])
+        self.Ki = np.array([
+            [0.3, 0],
+            [0, 0.0003]
+        ])
+
+08_18_live_modelpid
+-model (changed DP to PT1_measured - PT2_ref)
+-pid
+-g angle reading offset present, don't forget to add the offset
+-ss_model: SS_models_0818
+model global controller = 10s
+
+        self.Kp = np.array([
+            [0.01, 0],
+            [0, 0.0003]
+        ])
+        self.Ki = np.array([
+            [0.2, 0],
+            [0, 0.0003]
+        ])
+
+08_18_live_modelpid
+-model (changed DP to PT1_measured - PT2_ref)
+-pid and ff
+-g angle reading offset present, don't forget to add the offset
+-ss_model: SS_models_0818
+-model global controller = 10s
+        self.Kp = np.array([
+            [0.01, 0],
+            [0, 0.0002]
+        ])
+        self.Ki = np.array([
+            [0.1, 0],
+            [0, 0.0002]
+        ])
+
+08_18_live_modelpid_dis
+-model (changed DP to PT1_measured - PT2_ref)
+-pid
+-disturbance only
+g angle offset fixed
+-model global controller =1 hz
+-ss_model: SS_models_0818
+        self.Kp = np.array([
+            [0.01, 0],
+            [0, 0.0003]
+        ])
+        self.Ki = np.array([
+            [0.2, 0],
+            [0, 0.0003]
+        ])
+
+2020_08_19_sim_fuzzypid
+-fuzzy 3sec
+-fuzzy disturbance 12sec'
+
+        self.Kp = np.array([
+            [0.02, 0],
+            [0, 0.0003]
+        ])
+        self.Ki = np.array([
+            [0.3, 0],
+            [0, 0.0003]
+        ])
+
+        self.k1 = 1
+        self.k2 = 1
+        self.k3 = 2
+        self.w_prev = 0
+        self.P_prev = 0
+        self.DP_prev = 0
+        self.PT2_ref = x_current['PT2_ref']
+        
+        self.delta_w_fuzz_set = np.array([
+          -200, -50, -20, 0, 20, 50, 200
+        ])
+
+        self.delta_P_fuzz_set = np.array([
+          -1.5, -1, -0.5, 0, 0.5, 1, 1.5
+        ])
+
+/2020_08_19_live_fuzzypid
+
+-fuzzy 3sec
+-fuzzy disturbance 12sec'
+-100 disturbance
+
+        self.Kp = np.array([
+            [0.01, 0],
+            [0, 0.0003]
+        ])
+        self.Ki = np.array([
+            [0.2, 0],
+            [0, 0.0003]
+        ])
+
+        self.k1 = 1
+        self.k2 = 1
+        self.k3 = 2
+        self.w_prev = 0
+        self.P_prev = 0
+        self.DP_prev = 0
+        self.PT2_ref = x_current['PT2_ref']
+        
+        self.delta_w_fuzz_set = np.array([
+          -200, -50, -20, 0, 20, 50, 200
+        ])
+
+        self.delta_P_fuzz_set = np.array([
+          -1.5, -1, -0.5, 0, 0.5, 1, 1.5
+        ])
+
+/2020_08_19_live_fuzzypid2
+
+-fuzzy 10sec
+-fuzzy disturbance 20sec'
+-50 disturbance 
+-same gains as above except k3= 2
+-doesn't work well, lower to 300RPM for 35.12, but can't go up for higher angles
+
+/2020_08_19_live_fuzzypid3
+/2020_08_19_live_modelpid3
+/2020_08_19_live_fuzzypid_dis
+-fuzzy 5 sec
+- fuzzy disturbance +/- 100 every 27 sec
+-added saturation limits prevention
+-changed to maximizing efficiency instead of power
+- all fuzzy k were 1s
+	self.delta_w_fuzz_set = np.array([
+          -200, -50, -20, 0, 20, 50, 200
+        ])
+
+        self.delta_P_fuzz_set = np.array([
+          -0.1, -0.05, -0.01, 0, 0.01, 0.05, 0.1
+        ])
